@@ -1,0 +1,16 @@
+node_modules
+Dockerfile.openfront
+docker-compose*
+.dockerignore
+.git
+.gitignore
+
+LICENSE
+.vscode
+Makefile
+helm-charts
+.env*
+.editorconfig
+.idea
+coverage*
+tests/
