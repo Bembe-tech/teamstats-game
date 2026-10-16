@@ -77,6 +77,9 @@ export class FogOfWar {
   private readonly dist: Uint16Array;
   private readonly fogTile: Uint16Array; // what the renderer gets
   private readonly fogTrail: Uint16Array;
+  // Railroads as last seen (rails in the fog stay as they were when you saw them)
+  private readonly fogRail: Uint8Array;
+  private railChanged = false;
   private readonly friendly = new Uint8Array(OWNER_MASK + 1);
   private initialized = false;
   private mySmallID = 0;
@@ -105,6 +108,7 @@ export class FogOfWar {
     this.dist = new Uint16Array(n);
     this.fogTile = new Uint16Array(w * h);
     this.fogTrail = new Uint16Array(w * h);
+    this.fogRail = new Uint8Array(w * h);
     this.image = document.createElement("canvas");
     this.image.width = this.cw;
     this.image.height = this.ch;
@@ -157,7 +161,12 @@ export class FogOfWar {
       // Fog just lifted (death, end of game): show the real map again.
       this.wasActive = false;
       this.imageDirty = true;
-      return { ...frame, changedTiles: null, structuresDirty: true };
+      return {
+        ...frame,
+        changedTiles: null,
+        structuresDirty: true,
+        railroadDirty: true,
+      };
     }
     this.wasActive = true;
 
@@ -171,6 +180,7 @@ export class FogOfWar {
 
     const tiles = frame.tileState;
     const trails = frame.trailState;
+    const rails = frame.railroadState;
     const friendly = this.friendly;
     let full = !this.initialized || frame.changedTiles === null;
     const changed: number[] = [];
@@ -185,6 +195,7 @@ export class FogOfWar {
         this.fogTile[i] =
           seen || friendly[t & OWNER_MASK] ? t : t & FALLOUT_BIT;
         this.fogTrail[i] = seen ? trails[i] : 0;
+        this.fogRail[i] = seen ? rails[i] : 0;
       }
       this.initialized = true;
       flipped = true;
@@ -216,6 +227,10 @@ export class FogOfWar {
               changed.push(i);
             }
             this.fogTrail[i] = nowSeen ? trails[i] : 0;
+            if (nowSeen && this.fogRail[i] !== rails[i]) {
+              this.fogRail[i] = rails[i];
+              this.railChanged = true;
+            }
           }
         }
         if (trailMax < trailMin) {
@@ -242,6 +257,20 @@ export class FogOfWar {
         }
       }
     }
+    // Rails built or removed this tick: only where the player can see.
+    if (!full && frame.railroadDirty) {
+      for (let i = 0; i < rails.length; i++) {
+        if (this.fogRail[i] !== rails[i] && this.vis[this.cellOf(i)] === 1) {
+          this.fogRail[i] = rails[i];
+          this.railChanged = true;
+        }
+      }
+    }
+    const railroadDirty = full || this.railChanged;
+    this.railChanged = false;
+    const revealedRailTiles = frame.revealedRailTiles.filter(
+      (r) => this.vis[this.cellOf(r)] === 1,
+    );
     if (flipped) this.imageDirty = true;
 
     // Units: friendly ones always, others only inside vision.
@@ -295,6 +324,9 @@ export class FogOfWar {
       ...frame,
       tileState: this.fogTile,
       trailState: this.fogTrail,
+      railroadState: this.fogRail,
+      railroadDirty,
+      revealedRailTiles,
       changedTiles: full ? null : changed,
       trailDirtyRowMin: trailMin,
       trailDirtyRowMax: trailMax,

@@ -21,19 +21,19 @@ function view(spawnPhase: boolean) {
   } as never;
 }
 
-function frame(tick: number, tiles: Uint16Array, units: object[] = [], deadUnits: object[] = []) {
+function frame(tick: number, tiles: Uint16Array, units: object[] = [], deadUnits: object[] = [], rails: Uint8Array = new Uint8Array(W * H), railroadDirty = false) {
   return {
     tick,
     inSpawnPhase: false,
     tileState: tiles,
     trailState: new Uint16Array(W * H),
-    railroadState: new Uint8Array(0),
+    railroadState: rails,
     units: new Map(units.map((u, i) => [i + 1, u])),
     players: new Map(),
     names: new Map(),
     events: { deadUnits, conquestEvents: [], bonusEvents: [] },
     changedTiles: null,
-    railroadDirty: false,
+    railroadDirty,
     revealedRailTiles: [],
     trailDirtyRowMin: 1,
     trailDirtyRowMax: 0,
@@ -93,5 +93,18 @@ describe("Fog of War", () => {
     expect(fog.hidesTile(ref(150, 150))).toBe(false);
     fog.filter(view(false), frame(71, tiles));
     expect(fog.hidesTile(ref(150, 150))).toBe(true);
+  });
+
+  test("railroads in the fog stay hidden, those in view show", () => {
+    const fog = new FogOfWar(W, H);
+    const tiles = world();
+    const rails = new Uint8Array(W * H);
+    fog.filter(view(false), frame(1, tiles, [], [], rails));
+    rails[ref(150, 150)] = 1; // enemy rail far away
+    rails[ref(5, 12)] = 1; // rail next to my land
+    const out = fog.filter(view(false), frame(2, tiles, [], [], rails, true)) as unknown as { railroadState: Uint8Array; railroadDirty: boolean };
+    expect(out.railroadDirty).toBe(true);
+    expect(out.railroadState[ref(5, 12)]).toBe(1);
+    expect(out.railroadState[ref(150, 150)]).toBe(0);
   });
 });
