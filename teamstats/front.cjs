@@ -3,6 +3,9 @@
 // the /wN prefix), /api/create_game to a worker, everything else to the master. WebSockets too.
 // Also the gate: without the access cookie only /join/<id> links (and what the game loads) work;
 // /?key=<ACCESS_KEY> sets the cookie and opens the host panel.
+// Everyone logged in with Discord on teamstats.pro may host too: the site's /play hands over a short-lived
+// ticket signed with PLAY_SECRET (same value on both services), and /?ticket=<ticket> turns it into a signed
+// player cookie. Such a host has one lobby or game at a time (key holders have no limit).
 const http = require("http");
 const net = require("net");
 const crypto = require("crypto");
@@ -12,8 +15,13 @@ const MASTER = 3000;
 const WORKER_BASE = 3001;
 const NUM_WORKERS = Number(process.env.NUM_WORKERS || 1);
 const ACCESS_KEY = process.env.ACCESS_KEY || "";
+const PLAY_SECRET = String(process.env.PLAY_SECRET || "").trim();
+const PLAY_SITE = String(process.env.PLAY_SITE || "https://teamstats.pro").trim().replace(/\/+$/, "");
 const COOKIE = "tsp_host";
+const USER_COOKIE = "tsp_user";
+const USER_COOKIE_MS = 30 * 24 * 3600 * 1000;
 const cookieValue = ACCESS_KEY ? crypto.createHash("sha256").update("tsp-host:" + ACCESS_KEY).digest("hex").slice(0, 32) : "";
+const ticketsOn = PLAY_SECRET.length >= 16;
 
 function route(url) {
   const m = /^\/w(\d+)(\/.*)?$/.exec(url.split("?")[0]);
@@ -25,9 +33,38 @@ function route(url) {
   return { port: MASTER, path: url };
 }
 
+function cookies(req) {
+  const out = {};
+  for (const c of (req.headers.cookie || "").split(/;\s*/)) {
+    const i = c.indexOf("=");
+    if (i > 0) out[c.slice(0, i)] = c.slice(i + 1);
+  }
+  return out;
+}
+const sign = s => crypto.createHmac("sha256", PLAY_SECRET).update(s).digest("base64url");
+const sameSig = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+// Signed value: base64url(JSON) + "." + HMAC(prefix + body). Returns the JSON when the signature fits and exp is ahead.
+function readSigned(v, prefix) {
+  if (!ticketsOn || !v) return null;
+  const [body, sig] = String(v).split(".");
+  if (!body || !sig || !sameSig(sig, sign(prefix + body))) return null;
+  try {
+    const d = JSON.parse(Buffer.from(body, "base64url").toString());
+    return d && d.id && d.exp > Date.now() ? d : null;
+  } catch { return null; }
+}
+// Ticket from the site (tanks3d.js format: {id, name, avatar, exp}, HMAC of the body alone).
+const readTicket = t => readSigned(t, "");
+// Discord id of a host who came with a ticket (the player cookie), or "".
+const userId = req => String(readSigned(cookies(req)[USER_COOKIE], "u:")?.id || "");
+function userCookie(id) {
+  const body = Buffer.from(JSON.stringify({ id, exp: Date.now() + USER_COOKIE_MS })).toString("base64url");
+  return `${USER_COOKIE}=${body}.${sign("u:" + body)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${USER_COOKIE_MS / 1000}`;
+}
+const hasKey = req => !!ACCESS_KEY && cookies(req)[COOKIE] === cookieValue;
 function hasAccess(req) {
-  if (!ACCESS_KEY) return true;
-  return (req.headers.cookie || "").split(/;\s*/).some(c => c === COOKIE + "=" + cookieValue);
+  if (!ACCESS_KEY && !ticketsOn) return true;
+  return hasKey(req) || !!userId(req);
 }
 // The host panel (the page itself at "/") needs the key; join links, the game's files and the
 // game sockets are open, so invited players get in with just the link.
@@ -39,6 +76,20 @@ function isHostOnly(req) {
   return /^\/api\/create_game$/.test(p) || /^\/w\d+\/api\/create_game/.test(p);
 }
 
+// One open lobby or running game per ticket host: their last game id and its worker port.
+const lastGame = new Map();
+function gameExists(g) {
+  return new Promise(resolve => {
+    const r = http.get({ host: "127.0.0.1", port: g.port, path: `/api/game/${g.id}/exists`, timeout: 1500 }, res => {
+      let b = "";
+      res.on("data", c => { b += c; });
+      res.on("end", () => { try { resolve(!!JSON.parse(b).exists); } catch { resolve(false); } });
+    });
+    r.on("timeout", () => r.destroy());
+    r.on("error", () => resolve(false));
+  });
+}
+
 // Shown on "/" without the host key: players paste their invite link or code.
 const INVITE_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TeamStats.Pro</title><style>
@@ -48,18 +99,47 @@ background:radial-gradient(circle at 15% -10%,rgba(87,230,255,.10),transparent 4
 h1{margin:0 0 6px;font-size:26px;letter-spacing:.04em}h1 b{color:#57e6ff}p{margin:0 0 18px;color:#8f9bab;font-size:14px;line-height:1.5}
 form{display:flex;gap:8px}input{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid #232c3c;background:#05060a;color:#fff;font-size:15px}
 input:focus{outline:none;border-color:#57e6ff}button{padding:12px 16px;border:0;border-radius:10px;background:#3d7dff;color:#fff;font-weight:700;cursor:pointer}
-.e{color:#ff5d6c;font-size:13px;margin-top:10px;min-height:1em}</style></head><body><div class="c">
+.e{color:#ff5d6c;font-size:13px;margin-top:10px;min-height:1em}
+.host{display:block;margin:18px 0 0;padding:12px;border-radius:10px;border:1px solid rgba(87,230,255,.35);background:rgba(87,230,255,.08);color:#57e6ff;font-weight:700;text-align:center;text-decoration:none}
+.host:hover{background:rgba(87,230,255,.16)}</style></head><body><div class="c">
 <h1>TEAMSTATS<b>.PRO</b></h1><p>Paste the invite link (or the lobby code) you got from the host. A link ending in <b>/streamer-mode</b> has no code: ask the host to use <b>Copy invite link</b>.</p>
 <form id="f"><input id="i" placeholder="https://…/game/AbCd1234 or AbCd1234" autofocus><button>Join</button></form><div class="e" id="e"></div>
+${ticketsOn ? `<a class="host" href="${PLAY_SITE}/play">Host your own lobby: log in with Discord</a>` : ""}
 <p style="margin:18px 0 0;font-size:12px">© OpenFront and Contributors · <a href="https://github.com/Bembe-tech/teamstats-game" style="color:#6ea8ff">Source code (AGPL-3.0)</a></p></div>
 <script>document.getElementById("f").onsubmit=function(ev){ev.preventDefault();var v=document.getElementById("i").value.trim();
 var m=/(?:game[/])?([A-Za-z0-9]{8,12})(?:[?#/].*)?$/.exec(v);if(!m){document.getElementById("e").textContent="That does not look like a lobby link or code.";return;}
 location.href="/game/"+m[1];};</script></body></html>`;
 
-const server = http.createServer((req, res) => {
+// Passes the request on; with onDone the answer is buffered and handed over before it is sent.
+function proxy(req, res, t, onDone) {
+  const up = http.request({ host: "127.0.0.1", port: t.port, path: t.path, method: req.method, headers: req.headers }, r => {
+    if (!onDone) {
+      res.writeHead(r.statusCode, r.headers);
+      return r.pipe(res);
+    }
+    const parts = [];
+    r.on("data", c => parts.push(c));
+    r.on("end", () => {
+      const body = Buffer.concat(parts);
+      onDone(r.statusCode, body);
+      res.writeHead(r.statusCode, r.headers);
+      res.end(body);
+    });
+  });
+  up.on("error", () => { if (!res.headersSent) res.writeHead(502); res.end(); });
+  req.pipe(up);
+}
+
+const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
   if (ACCESS_KEY && u.pathname === "/" && u.searchParams.get("key") === ACCESS_KEY) {
     res.writeHead(302, { "Set-Cookie": `${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`, Location: "/" });
+    return res.end();
+  }
+  if (u.pathname === "/" && u.searchParams.has("ticket")) {
+    const who = readTicket(u.searchParams.get("ticket"));
+    if (who) console.log(new Date().toISOString(), "host login", who.id, who.name || "");
+    res.writeHead(302, who ? { "Set-Cookie": userCookie(String(who.id)), Location: "/" } : { Location: "/" });
     return res.end();
   }
   if (isHostOnly(req) && !hasAccess(req)) {
@@ -68,12 +148,21 @@ const server = http.createServer((req, res) => {
   }
   if (/^\/(w\d+\/)?game\//.test(req.url)) console.log(new Date().toISOString(), req.socket.remoteAddress, req.url);
   const t = route(req.url);
-  const up = http.request({ host: "127.0.0.1", port: t.port, path: t.path, method: req.method, headers: req.headers }, r => {
-    res.writeHead(r.statusCode, r.headers);
-    r.pipe(res);
+  const uid = req.method === "POST" && /^\/(w\d+\/)?api\/create_game$/.test(u.pathname) && !hasKey(req) ? userId(req) : "";
+  if (!uid) return proxy(req, res, t);
+  // A successor of a finished game (?previous=) takes its place, so it is never blocked.
+  const prev = lastGame.get(uid);
+  if (prev && !u.searchParams.has("previous") && await gameExists(prev)) {
+    res.writeHead(429, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ error: "You already have an open lobby or game. Close it before you create another one.", gameID: prev.id }));
+  }
+  proxy(req, res, t, (status, body) => {
+    if (status !== 200) return;
+    try {
+      const g = JSON.parse(body.toString());
+      if (g.gameID) lastGame.set(uid, { id: g.gameID, port: t.port });
+    } catch {}
   });
-  up.on("error", () => { if (!res.headersSent) res.writeHead(502); res.end(); });
-  req.pipe(up);
 });
 
 server.on("upgrade", (req, socket, head) => {
@@ -89,4 +178,4 @@ server.on("upgrade", (req, socket, head) => {
   socket.on("error", () => up.destroy());
 });
 
-server.listen(PORT, () => console.log(`TeamStats.Pro front on :${PORT} (master ${MASTER}, ${NUM_WORKERS} worker(s))`));
+server.listen(PORT, () => console.log(`TeamStats.Pro front on :${PORT} (master ${MASTER}, ${NUM_WORKERS} worker(s)${ticketsOn ? ", Discord hosts on" : ""})`));

@@ -2124,6 +2124,20 @@ export async function createLobby(): Promise<{
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Server error response:", errorText);
+      // TeamStats.Pro front (teamstats/front.cjs): a Discord host already has an open lobby or game
+      if (response.status === 429) {
+        let message = "You already have an open lobby or game.";
+        try {
+          message = JSON.parse(errorText).error || message;
+        } catch {
+          // not JSON: keep the default text
+        }
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: { message, color: "red", duration: 6000 },
+          }),
+        );
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 

@@ -12,7 +12,12 @@
 //     horizon), incoming nukes only once they fly into vision;
 //   - a dark overlay (drawn by drawOverlay on a 2D canvas over the map)
 //     covers everything outside vision.
-// No fog during the spawn phase, for spectators or after the player died.
+//   - spawn phase: other players are hidden everywhere (no dark overlay,
+//     the map stays readable for picking a spot);
+//   - the player's OWN nukes (not allies') light up the sky around them in
+//     flight, and the blast area stays visible for a few seconds after the
+//     detonation, then goes back under the fog.
+// No fog for spectators or after the player died.
 
 import { UnitType } from "../core/game/Game";
 import { FALLOUT_BIT, OWNER_MASK } from "./render/gl/utils/TileCodec";
@@ -43,6 +48,16 @@ const UNIT_VISION: Record<string, number> = {
   [UnitType.Factory]: 30,
 };
 
+// Own nukes: vision around the missile in flight, and around the blast for
+// NUKE_REVEAL_TICKS after it detonates (radius by bomb type, in tiles).
+const NUKE_FLIGHT_VISION = 30;
+const NUKE_REVEAL_TICKS = 60; // 6 s at 10 ticks/s
+const NUKE_BLAST_VISION: Record<string, number> = {
+  [UnitType.AtomBomb]: 45,
+  [UnitType.HydrogenBomb]: 110,
+  [UnitType.MIRVWarhead]: 30,
+};
+
 const NUKES = new Set<string>([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
@@ -64,6 +79,10 @@ export class FogOfWar {
   private readonly fogTrail: Uint16Array;
   private readonly friendly = new Uint8Array(OWNER_MASK + 1);
   private initialized = false;
+  private mySmallID = 0;
+  private spawnPhase = false;
+  // Blasts of the player's own nukes still in view: tile x, y, radius, until tick
+  private reveals: { x: number; y: number; r: number; until: number }[] = [];
   private wasActive = false;
 
   private readonly image: HTMLCanvasElement;
@@ -125,9 +144,10 @@ export class FogOfWar {
 
   private shouldFog(gameView: GameView): boolean {
     if (!gameView.config().fogOfWar()) return false;
-    if (gameView.inSpawnPhase()) return false;
     const me = gameView.myPlayer();
-    return me !== null && me.isAlive();
+    if (me === null) return false;
+    // In the spawn phase the player has no land yet: still fogged (spawns hidden)
+    return gameView.inSpawnPhase() || me.isAlive();
   }
 
   /** Returns the FrameData the local player is allowed to see. */
@@ -142,6 +162,10 @@ export class FogOfWar {
     this.wasActive = true;
 
     this.updateFriendly(gameView);
+    const wasSpawn = this.spawnPhase;
+    this.spawnPhase = gameView.inSpawnPhase();
+    if (wasSpawn !== this.spawnPhase) this.imageDirty = true;
+    this.trackOwnNukeBlasts(frame);
     this.prevVis.set(this.vis);
     this.computeVision(frame);
 
@@ -283,10 +307,29 @@ export class FogOfWar {
     };
   }
 
+  // Detonations of the player's own nukes this tick start a reveal; old ones expire.
+  private trackOwnNukeBlasts(frame: FrameData): void {
+    const tick = frame.tick;
+    this.reveals = this.reveals.filter((b) => b.until > tick);
+    for (const d of frame.events.deadUnits) {
+      if ((d.ownerSmallID & OWNER_MASK) !== this.mySmallID) continue;
+      if (!d.reachedTarget) continue;
+      const r = NUKE_BLAST_VISION[d.unitType];
+      if (r === undefined) continue;
+      this.reveals.push({
+        x: d.pos % this.w,
+        y: (d.pos / this.w) | 0,
+        r,
+        until: tick + NUKE_REVEAL_TICKS,
+      });
+    }
+  }
+
   private updateFriendly(gameView: GameView): void {
     this.friendly.fill(0);
     const me = gameView.myPlayer();
     if (me === null) return;
+    this.mySmallID = me.smallID();
     this.friendly[me.smallID()] = 1;
     for (const p of gameView.playerViews()) {
       if (p !== me && me.isFriendly(p)) this.friendly[p.smallID()] = 1;
@@ -338,7 +381,24 @@ export class FogOfWar {
       }
     }
     const limit = Math.round((LAND_VISION / CELL) * 3);
+    if (this.spawnPhase) {
+      // Picking a spawn: no vision at all, so no other player shows anywhere
+      // (own land is always shown, see filter()).
+      this.vis.fill(0);
+      this.seenPlayers.fill(0);
+      this.seenPlayers.set(friendly);
+      return;
+    }
     for (let i = 0; i < dist.length; i++) this.vis[i] = dist[i] <= limit ? 1 : 0;
+
+    // Own nukes: the missile in flight and its recent blasts.
+    for (const u of frame.units.values()) {
+      if ((u.ownerID & OWNER_MASK) !== this.mySmallID) continue;
+      if (NUKES.has(u.unitType)) {
+        this.stamp(u.pos % w, (u.pos / w) | 0, NUKE_FLIGHT_VISION);
+      }
+    }
+    for (const b of this.reveals) this.stamp(b.x, b.y, b.r);
 
     for (const u of frame.units.values()) {
       if (!friendly[u.ownerID & OWNER_MASK]) continue;
@@ -421,7 +481,7 @@ export class FogOfWar {
     if (this.imageDirty) {
       const px = this.imageData.data;
       for (let i = 0; i < this.vis.length; i++) {
-        px[i * 4 + 3] = this.vis[i] === 1 ? 0 : FOG_ALPHA;
+        px[i * 4 + 3] = this.spawnPhase || this.vis[i] === 1 ? 0 : FOG_ALPHA;
       }
       this.image.getContext("2d")!.putImageData(this.imageData, 0, 0);
       // Blur the cell grid a little so the fog edge is soft, not blocky.
