@@ -270,3 +270,5 @@ host-lobby-modal.page-content:not(.hidden){
 .ts-startin-b.on{color:#fff;background:linear-gradient(180deg,rgba(61,125,255,.3),rgba(87,230,255,.1));border-color:rgba(87,230,255,.7);box-shadow:0 0 12px rgba(87,230,255,.18)}
 .ts-startin-b:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:1023px){.ts-startin .ts-side-label{display:none}.ts-startin{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px}.ts-startin-b{flex:none}}
+
+.ts-invite:disabled{opacity:.5;cursor:wait;border-style:dashed}

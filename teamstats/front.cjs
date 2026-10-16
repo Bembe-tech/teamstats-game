@@ -33,7 +33,9 @@ function hasAccess(req) {
 // game sockets are open, so invited players get in with just the link.
 function isHostOnly(req) {
   const p = req.url.split("?")[0];
-  if (p === "/" || p === "/index.html") return true;
+  // /streamer-mode is the host's address bar in streamer mode (code hidden):
+  // a guest who got it pastes the real invite link instead
+  if (p === "/" || p === "/index.html" || p === "/streamer-mode") return true;
   return /^\/api\/create_game$/.test(p) || /^\/w\d+\/api\/create_game/.test(p);
 }
 
@@ -47,7 +49,7 @@ h1{margin:0 0 6px;font-size:26px;letter-spacing:.04em}h1 b{color:#57e6ff}p{margi
 form{display:flex;gap:8px}input{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid #232c3c;background:#05060a;color:#fff;font-size:15px}
 input:focus{outline:none;border-color:#57e6ff}button{padding:12px 16px;border:0;border-radius:10px;background:#3d7dff;color:#fff;font-weight:700;cursor:pointer}
 .e{color:#ff5d6c;font-size:13px;margin-top:10px;min-height:1em}</style></head><body><div class="c">
-<h1>TEAMSTATS<b>.PRO</b></h1><p>Paste the invite link (or the lobby code) you got from the host.</p>
+<h1>TEAMSTATS<b>.PRO</b></h1><p>Paste the invite link (or the lobby code) you got from the host. A link ending in <b>/streamer-mode</b> has no code: ask the host to use <b>Copy invite link</b>.</p>
 <form id="f"><input id="i" placeholder="https://…/game/AbCd1234 or AbCd1234" autofocus><button>Join</button></form><div class="e" id="e"></div>
 <p style="margin:18px 0 0;font-size:12px">© OpenFront and Contributors · <a href="https://github.com/Bembe-tech/teamstats-game" style="color:#6ea8ff">Source code (AGPL-3.0)</a></p></div>
 <script>document.getElementById("f").onsubmit=function(ev){ev.preventDefault();var v=document.getElementById("i").value.trim();

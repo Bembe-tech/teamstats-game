@@ -8,6 +8,7 @@ import {
   getSecondsUntilServerTimestamp,
   renderDuration,
   showToast,
+  copyToClipboard,
   translateText,
 } from "../client/Utils";
 import { GameEnv } from "../core/configuration/Config";
@@ -493,6 +494,9 @@ export class HostLobbyModal extends BaseModal {
     const settings = notableLobbySettings(config, this.nations);
     const players = this.clients.filter((c) => !c.spectator).length;
     const link = `${location.origin}/game/${this.lobbyId}`;
+    // Streamer mode (hidden lobby ID): the code is masked on screen, the copied link is complete
+    const hidden = !this.userSettings.lobbyIdVisibility();
+    const shown = link.replace(/^https?:\/\//, "");
     return html`
       <div class="ts-side-map" @click=${() => (this.tab = "map")}>
         ${thumb
@@ -526,17 +530,28 @@ export class HostLobbyModal extends BaseModal {
       <button
         type="button"
         class="ts-invite"
-        title=${link}
-        @click=${() => {
-          void navigator.clipboard?.writeText(link);
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: { message: "Invite link copied", color: "green", duration: 1500 },
-            }),
-          );
+        ?disabled=${!this.lobbyId}
+        title=${hidden ? "" : link}
+        @click=${async () => {
+          // Never copy a link without the lobby code
+          if (!this.lobbyId) return;
+          try {
+            await copyToClipboard(link);
+            showToast("Invite link copied", "green", 1500);
+          } catch {
+            // Clipboard blocked: show the link so it can be copied by hand
+            window.prompt("Copy the invite link:", link);
+          }
         }}
       >
-        <span>Copy invite link</span><small>${link.replace(/^https?:\/\//, "")}</small>
+        <span>${this.lobbyId ? "Copy invite link" : "Creating lobby…"}</span
+        ><small
+          >${!this.lobbyId
+            ? ""
+            : hidden
+              ? shown.replace(this.lobbyId, "••••••••")
+              : shown}</small
+        >
       </button>
     `;
   }
