@@ -670,7 +670,8 @@ export class GameModeSelector extends LitElement {
       <div class="ts-home">
         <section class="ts-hero">
           <div class="ts-kicker">Private lobbies</div>
-          <h1 class="ts-title">Play together with <span>your viewers</span></h1>
+          <h1 class="ts-brand">TEAMSTATS<span>.PRO</span></h1>
+          <h2 class="ts-title">Play together with <span>your viewers</span></h2>
           <p class="ts-sub">
             Create a lobby, pick the map and the rules, send the link. Everyone
             with the link joins your game.
@@ -697,13 +698,6 @@ export class GameModeSelector extends LitElement {
             "Practice alone against nations and bots",
             icon("M12 8a4 4 0 1 0 0 .01M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"),
             this.openSinglePlayerModal,
-          )}
-          ${card(
-            "ts-small",
-            translateText("main.tutorial"),
-            "Learn the basics step by step",
-            icon("M12 3 2 8l10 5 10-5-10-5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"),
-            this.startTutorial,
           )}
         </div>
         <div class="ts-modes">

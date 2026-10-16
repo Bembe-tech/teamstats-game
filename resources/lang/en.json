@@ -904,7 +904,7 @@
     "water_nukes": "Water nukes",
     "fog_of_war": "Fog of War",
     "home_economy": "Self Economy",
-    "king_of_the_hill": "King of the Hill (minutes)"
+    "king_of_the_hill": "King of the Hill"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",

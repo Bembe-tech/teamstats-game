@@ -110,7 +110,13 @@ export class HostLobbyModal extends BaseModal {
   // TeamStats.Pro: players the host moved to a team
   @state() private teamPins: { clientID: string; team: number }[] = [];
   // TeamStats.Pro: tab of the create-lobby window
-  @state() private tab: "map" | "mode" | "options" | "units" | "players" =
+  @state() private tab:
+    | "map"
+    | "gamemodes"
+    | "mode"
+    | "options"
+    | "units"
+    | "players" =
     "map";
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
@@ -248,7 +254,6 @@ export class HostLobbyModal extends BaseModal {
         >
           ${translateText("host_modal.title")}
         </span>
-        ${this.renderVisibilityToggle()}
       `,
       onBack: () => {
         this.leaveLobbyOnClose = true;
@@ -260,22 +265,9 @@ export class HostLobbyModal extends BaseModal {
       // was the one surface the invite button originally missed. Paired behind
       // a wrapper only when the invite is present, so a browser renders exactly
       // the markup it did before.
-      rightContent: (() => {
-        const copy = html`<copy-button
-          .lobbyId=${this.lobbyId}
-          .lobbySuffix=${this.lobbyUrlSuffix}
-          include-lobby-query
-        ></copy-button>`;
-        // Not until there is a lobby to invite anyone into. createLobby()
-        // assigns lobbyId asynchronously and the modal renders before it
-        // lands, so without this the button is live during that window with
-        // no shadow lobby behind it — the invite would silently no-op. The
-        // join modal gets this free from its own !currentLobbyId early return.
-        const invite = this.lobbyId ? inviteFriendsButton() : undefined;
-        return invite
-          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-          : copy;
-      })(),
+      // TeamStats.Pro: no lobby-code box here; the side panel's
+      // "Copy invite link" is the one way to share the lobby.
+      rightContent: undefined,
     });
   }
 
@@ -411,11 +403,97 @@ export class HostLobbyModal extends BaseModal {
     void this.handlePublicListingToggle(isPublic);
   }
 
+  // TeamStats.Pro: our own game modes, each with a short explanation
+  private renderGamemodes() {
+    const card = (
+      on: boolean,
+      icon: string,
+      title: string,
+      text: string,
+      toggle: () => void,
+      extra: unknown = nothing,
+    ) => html`<div class="ts-mode ${on ? "ts-mode-on" : ""}">
+      <button type="button" class="ts-mode-head" @click=${toggle}>
+        <span class="ts-mode-ico">${icon}</span>
+        <span class="ts-mode-title">${title}</span>
+        <span class="ts-switch ${on ? "on" : ""}" aria-hidden="true"></span>
+      </button>
+      <p class="ts-mode-text">${text}</p>
+      ${extra}
+    </div>`;
+    return html`<section class="ts-modes-tab">
+      <div class="ts-modes-intro">
+        <h3 class="ts-h">TeamStats Gamemodes</h3>
+        <p>Our own rules on top of the normal game. Mix them as you like.</p>
+      </div>
+      <div class="ts-mode-grid">
+        ${card(
+          this.fogOfWar,
+          "🌫",
+          "Fog of War",
+          "You only see around your land and units. Warships, SAMs and ports see further, so scout. Spawns are hidden while players pick a spot. Your own nuke lights up its flight and the blast for a few seconds.",
+          () => {
+            this.fogOfWar = !this.fogOfWar;
+            this.putGameConfig();
+          },
+        )}
+        ${card(
+          this.kingOfTheHill,
+          "👑",
+          "King of the Hill",
+          "The biggest player wears the crown and collects crown time. When the time runs out, whoever held the crown longest wins (in teams: the team's total). Normal map-control wins are off.",
+          () => {
+            this.kingOfTheHill = !this.kingOfTheHill;
+            if (this.kingOfTheHill && !this.kingOfTheHillMinutes) {
+              this.kingOfTheHillMinutes = 30;
+            }
+            this.putGameConfig();
+          },
+          this.kingOfTheHill
+            ? html`<label class="ts-mode-field"
+                >Game length
+                <input
+                  type="number"
+                  min="1"
+                  max="600"
+                  .value=${String(this.kingOfTheHillMinutes ?? 30)}
+                  @input=${this.handleKothMinutesInput}
+                  @keydown=${this.handleOvertimeMinutesKeyDown}
+                />
+                min</label
+              >`
+            : nothing,
+        )}
+        ${card(
+          this.homeEconomy,
+          "🏝",
+          "Self Economy",
+          "No trade with anyone else, allies included. Trade ships sail between your own ports, and every train stop pays a flat 35k gold.",
+          () => {
+            this.homeEconomy = !this.homeEconomy;
+            this.putGameConfig();
+          },
+        )}
+      </div>
+      <div class="ts-mode-notes">
+        <div>
+          <b>👥 Manual teams</b> In team mode, open the Players tab and drag a
+          player (or tap the player, then the team) to move them.
+        </div>
+        <div>
+          <b>⏱ Scheduled start</b> Pick "Start in" next to Start Game: the
+          countdown starts the game for everyone.
+        </div>
+      </div>
+    </section>`;
+  }
+
   // TeamStats.Pro: tabs of the create-lobby window
   private renderTabs() {
     const players = this.clients.filter((c) => !c.spectator).length;
     const tabs: [typeof this.tab, string, string][] = [
       ["map", translateText("map.map"), "🗺"],
+      ["gamemodes", "TeamStats Gamemodes", "⭐"],
       ["mode", translateText("host_modal.mode"), "⚔"],
       ["options", translateText("game_settings.options"), "⚙"],
       ["units", translateText("game_settings.disable_units"), "🚫"],
@@ -639,21 +717,6 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"game_settings.king_of_the_hill"}
-        .checked=${this.kingOfTheHill}
-        .inputMin=${1}
-        .inputMax=${600}
-        .inputStep=${1}
-        .inputValue=${this.kingOfTheHillMinutes}
-        .inputAriaLabel=${translateText("game_settings.king_of_the_hill")}
-        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
-        .defaultInputValue=${30}
-        .minValidOnEnable=${1}
-        .onToggle=${this.handleKothToggle}
-        .onInput=${this.handleKothMinutesInput}
-        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
-      ></toggle-input-card>`,
-      html`<toggle-input-card
         .labelKey=${"game_settings.overtime"}
         .checked=${this.overtime}
         .inputMin=${1}
@@ -773,8 +836,9 @@ export class HostLobbyModal extends BaseModal {
             : nothing}
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
+          ${this.tab === "gamemodes" ? this.renderGamemodes() : nothing}
           <game-config-settings
-            class="${this.tab === "players"
+            class="${this.tab === "players" || this.tab === "gamemodes"
               ? "hidden"
               : "block"} ${this.publiclyListed ? "opacity-60" : ""}"
             ?inert=${this.publiclyListed}
@@ -846,14 +910,6 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "game_settings.fog_of_war",
-                    checked: this.fogOfWar,
-                  },
-                  {
-                    labelKey: "game_settings.home_economy",
-                    checked: this.homeEconomy,
-                  },
-                  {
                     labelKey: "game_settings.doomsday_clock",
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
@@ -905,7 +961,9 @@ export class HostLobbyModal extends BaseModal {
             @host-cheat-toggle-changed=${this
               .handleConfigHostCheatToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
-            .section=${this.tab === "players" ? "map" : this.tab}
+            .section=${this.tab === "players" || this.tab === "gamemodes"
+              ? "map"
+              : this.tab}
           ></game-config-settings>
 
           <lobby-player-view
