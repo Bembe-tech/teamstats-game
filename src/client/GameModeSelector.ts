@@ -678,7 +678,9 @@ export class GameModeSelector extends LitElement {
           </p>
         </section>
         <div class="ts-actions">
-          ${card(
+          ${!/(?:^|; )tsp_host_ui=1/.test(document.cookie)
+            ? nothing
+            : card(
             "ts-primary",
             translateText("main.create"),
             "Pick a map and options, then invite players with a link",

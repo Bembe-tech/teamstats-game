@@ -109,6 +109,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private kingOfTheHillMinutes: number | undefined = undefined;
   // TeamStats.Pro: players the host moved to a team
   @state() private teamPins: { clientID: string; team: number }[] = [];
+  // TeamStats.Pro: why creating the lobby failed (shown in the side panel)
+  @state() private createError: string | null = null;
+  private createTimer: ReturnType<typeof setTimeout> | null = null;
   // TeamStats.Pro: tab of the create-lobby window
   @state() private tab:
     | "map"
@@ -605,9 +608,19 @@ export class HostLobbyModal extends BaseModal {
                 >`,
             )}
       </div>
+      ${this.createError !== null && !this.lobbyId
+        ? html`<div class="ts-create-error" role="alert">
+            <b>Lobby not created</b>
+            <span>${this.createError}</span>
+            <button type="button" @click=${() => location.assign("/")}>
+              Try again
+            </button>
+          </div>`
+        : nothing}
       <button
         type="button"
         class="ts-invite"
+        ?hidden=${this.createError !== null && !this.lobbyId}
         ?disabled=${!this.lobbyId}
         title=${hidden ? "" : link}
         @click=${async () => {
@@ -1100,8 +1113,16 @@ export class HostLobbyModal extends BaseModal {
     // resolves. clientID is assigned by the server when we join the lobby.
 
     // Pass auth token for creator identification (server extracts persistentID from it)
+    this.createError = null;
+    if (this.createTimer !== null) clearTimeout(this.createTimer);
+    this.createTimer = setTimeout(() => {
+      if (!this.lobbyId && this.createError === null) {
+        this.createError = "The game server did not answer.";
+      }
+    }, 15000);
     createLobby()
       .then(async ({ lobby, creatorToken }) => {
+        this.createError = null;
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
@@ -1129,7 +1150,13 @@ export class HostLobbyModal extends BaseModal {
           }),
         );
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        const msg = String((error as Error)?.message ?? error);
+        this.createError = /status: 403/.test(msg)
+          ? "This browser has no host access. Open your host link (with ?key=… or from teamstats.pro/play) again."
+          : /status: 429/.test(msg)
+            ? "You already have an open lobby or game. Close it first."
+            : "The lobby could not be created.";
         // Clear clipboard so the host doesn't accidentally share a dead link
         void navigator.clipboard.writeText("").catch(() => {});
       });

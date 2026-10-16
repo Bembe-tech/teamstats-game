@@ -76,6 +76,10 @@ function isHostOnly(req) {
   return /^\/api\/create_game$/.test(p) || /^\/w\d+\/api\/create_game/.test(p);
 }
 
+// Readable hint for the page (not a secret, the real check is the cookies above): this browser
+// is a host, so the home page shows Create Lobby. Guests who end up on the home page only see Join.
+const HOST_UI_COOKIE = "tsp_host_ui=1; Path=/; SameSite=Lax; Max-Age=31536000";
+
 // One open lobby or running game per ticket host: their last game id and its worker port.
 const lastGame = new Map();
 function gameExists(g) {
@@ -133,16 +137,22 @@ function proxy(req, res, t, onDone) {
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
   if (ACCESS_KEY && u.pathname === "/" && u.searchParams.get("key") === ACCESS_KEY) {
-    res.writeHead(302, { "Set-Cookie": `${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`, Location: "/" });
+    res.writeHead(302, { "Set-Cookie": [`${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`, HOST_UI_COOKIE], Location: "/" });
     return res.end();
   }
   if (u.pathname === "/" && u.searchParams.has("ticket")) {
     const who = readTicket(u.searchParams.get("ticket"));
     if (who) console.log(new Date().toISOString(), "host login", who.id, who.name || "");
-    res.writeHead(302, who ? { "Set-Cookie": userCookie(String(who.id)), Location: "/" } : { Location: "/" });
+    res.writeHead(302, who ? { "Set-Cookie": [userCookie(String(who.id)), HOST_UI_COOKIE], Location: "/" } : { Location: "/" });
+    return res.end();
+  }
+  // Hosts from before the hint cookie existed: give it once
+  if (u.pathname === "/" && (ACCESS_KEY || ticketsOn) && hasAccess(req) && cookies(req).tsp_host_ui !== "1") {
+    res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: req.url });
     return res.end();
   }
   if (isHostOnly(req) && !hasAccess(req)) {
+    if (/create_game/.test(req.url)) console.log(new Date().toISOString(), "create_game refused: no host key or Discord login", req.socket.remoteAddress);
     res.writeHead(403, { "Content-Type": "text/html; charset=utf-8" });
     return res.end(INVITE_PAGE);
   }
