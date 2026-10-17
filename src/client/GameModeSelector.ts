@@ -700,13 +700,6 @@ export class GameModeSelector extends LitElement {
             icon("M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"),
             this.openJoinLobby,
           )}
-          ${card(
-            "",
-            translateText("main.solo"),
-            "Practice alone against nations and bots",
-            icon("M12 8a4 4 0 1 0 0 .01M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"),
-            this.openSinglePlayerModal,
-          )}
         </div>
         <div class="ts-modes">
           <span class="ts-modes-label">Lobby modes</span>

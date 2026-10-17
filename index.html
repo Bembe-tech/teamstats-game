@@ -561,6 +561,8 @@ host-lobby-modal.page-content:not(.hidden){
 .ts-create-error b{color:#ff8a96;font-family:'Orbitron','Rajdhani',sans-serif;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
 .ts-create-error button{align-self:flex-start;padding:6px 12px;border:0;background:#ff5d6c;color:#fff;font-weight:700;cursor:pointer}
 .ts-invite[hidden]{display:none}
+/* Two action cards (Create/Host + Join) since Solo was removed */
+@media(min-width:640px){.ts-actions{grid-template-columns:1.4fr 1fr !important}}
 
     </style>
     <!-- ts-theme:end -->

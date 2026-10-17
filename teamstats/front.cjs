@@ -142,7 +142,7 @@ const server = http.createServer(async (req, res) => {
   }
   // "Host a lobby" on the home page for browsers that are not hosts yet
   if (u.pathname === "/host") {
-    if (hasAccess(req) && (ACCESS_KEY || ticketsOn)) {
+    if (hasAccess(req)) {
       res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: "/" });
       return res.end();
     }
@@ -160,7 +160,7 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   // Hosts from before the hint cookie existed: give it once
-  if (u.pathname === "/" && (ACCESS_KEY || ticketsOn) && hasAccess(req) && cookies(req).tsp_host_ui !== "1") {
+  if (u.pathname === "/" && hasAccess(req) && cookies(req).tsp_host_ui !== "1") {
     res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: req.url });
     return res.end();
   }
