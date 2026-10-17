@@ -32,6 +32,7 @@ export class PlayerStats extends StatsTable {
           myPlayer !== null &&
           (player === myPlayer || player.isOnSameTeam(myPlayer)),
         pinned: player === myPlayer,
+        fogged: FogOfWar.current?.hidesStatsOf(player.smallID()) ?? false,
         onClick: () => {
           if (this.eventBus !== null) {
             this.eventBus.emit(new GoToPlayerEvent(player));

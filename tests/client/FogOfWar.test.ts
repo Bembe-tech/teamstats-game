@@ -107,4 +107,21 @@ describe("Fog of War", () => {
     expect(out.railroadState[ref(5, 12)]).toBe(1);
     expect(out.railroadState[ref(150, 150)]).toBe(0);
   });
+
+  test("enemy numbers are hidden, an ally's are not", () => {
+    const fog = new FogOfWar(W, H);
+    fog.filter(view(false), frame(1, world()));
+    expect(fog.hidesStatsOf(ENEMY)).toBe(true);
+    expect(fog.hidesStatsOf(ALLY)).toBe(false);
+    expect(fog.hidesStatsOf(ME)).toBe(false);
+  });
+
+  test("my boat shows where it will land", () => {
+    const fog = new FogOfWar(W, H);
+    const tiles = world();
+    fog.filter(view(false), frame(1, tiles));
+    expect(fog.hidesTile(ref(150, 150))).toBe(true);
+    fog.filter(view(false), frame(2, tiles, [{ unitType: "Transport", ownerID: ME, pos: ref(15, 15), targetTile: ref(150, 150) }]));
+    expect(fog.hidesTile(ref(150, 150))).toBe(false);
+  });
 });

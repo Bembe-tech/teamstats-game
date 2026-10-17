@@ -51,6 +51,8 @@ const UNIT_VISION: Record<string, number> = {
 // Own nukes: vision around the missile in flight, and around the blast for
 // NUKE_REVEAL_TICKS after it detonates (radius by bomb type, in tiles).
 const NUKE_FLIGHT_VISION = 30;
+// Own transport boat: vision around the spot it sails to
+const BOAT_TARGET_VISION = 22;
 const NUKE_REVEAL_TICKS = 60; // 6 s at 10 ticks/s
 const NUKE_BLAST_VISION: Record<string, number> = {
   [UnitType.AtomBomb]: 45,
@@ -126,6 +128,14 @@ export class FogOfWar {
   /** False when the leaderboard may list this player. */
   hidesPlayer(smallID: number): boolean {
     return this.wasActive && this.seenPlayers[smallID & OWNER_MASK] !== 1;
+  }
+
+  /**
+   * True when the HUD must not show this player's numbers (gold, troops,
+   * max troops, buildings): fog is on and the player is not you or a friend.
+   */
+  hidesStatsOf(smallID: number): boolean {
+    return this.wasActive && this.friendly[smallID & OWNER_MASK] !== 1;
   }
 
   /** True while the fog is shown (drawOverlay draws only then). */
@@ -423,6 +433,13 @@ export class FogOfWar {
     }
     for (let i = 0; i < dist.length; i++) this.vis[i] = dist[i] <= limit ? 1 : 0;
 
+    // Own boats: where they will land (so you see what you sail into).
+    for (const u of frame.units.values()) {
+      if ((u.ownerID & OWNER_MASK) !== this.mySmallID) continue;
+      if (u.unitType === UnitType.TransportShip && u.targetTile !== null) {
+        this.stamp(u.targetTile % w, (u.targetTile / w) | 0, BOAT_TARGET_VISION);
+      }
+    }
     // Own nukes: the missile in flight and its recent blasts.
     for (const u of frame.units.values()) {
       if ((u.ownerID & OWNER_MASK) !== this.mySmallID) continue;

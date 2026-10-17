@@ -356,6 +356,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   private renderPlayerInfo(player: PlayerView) {
+    // TeamStats.Pro Fog of War: no gold, troops or buildings of other players
+    if (FogOfWar.current?.hidesStatsOf(player.smallID())) {
+      return html`<div class="p-2 lg:p-3 flex flex-col gap-1">
+        <div class="font-bold text-sm lg:text-lg text-white">
+          ${player.displayName()}
+        </div>
+        <div class="text-xs text-white/60">Stats hidden by Fog of War</div>
+      </div>`;
+    }
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);

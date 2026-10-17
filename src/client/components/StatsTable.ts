@@ -20,6 +20,8 @@ export interface StatsRow {
   emphasized?: boolean;
   pinned?: boolean;
   onClick?: () => void;
+  /** TeamStats.Pro Fog of War: show "?" instead of this player's numbers */
+  fogged?: boolean;
 }
 
 /** A row plus the rank it renders at (list-wide, not window-relative). */
@@ -285,10 +287,15 @@ export abstract class StatsTable extends LitElement {
             this.renderCell(
               column,
               index,
-              column.cell(
-                { ...row, position, value: row.values.get(column.id) ?? 0 },
-                game,
-              ),
+              row.fogged &&
+                column.isHideable &&
+                column.id !== "tiles" &&
+                column.id !== "clan"
+                ? "?"
+                : column.cell(
+                    { ...row, position, value: row.values.get(column.id) ?? 0 },
+                    game,
+                  ),
               borderClass,
             ),
         )}

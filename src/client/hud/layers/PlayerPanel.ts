@@ -31,6 +31,7 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { FogOfWar } from "../../FogOfWar";
 import { UIState } from "../../UIState";
 import {
   renderDuration,
@@ -626,6 +627,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderResources(other: PlayerView) {
+    // TeamStats.Pro Fog of War: other players' numbers stay hidden
+    if (FogOfWar.current?.hidesStatsOf(other.smallID())) return html``;
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
@@ -680,6 +683,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderStats(other: PlayerView, my: PlayerView) {
+    // TeamStats.Pro Fog of War: other players' numbers stay hidden
+    if (FogOfWar.current?.hidesStatsOf(other.smallID())) return html``;
     return html`
       <!-- Betrayals -->
       <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
