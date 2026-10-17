@@ -24,7 +24,7 @@ OpenFront. © OpenFront and Contributors.
 
 ```sh
 npm ci --ignore-scripts
-sh teamstats/rebuild-local.sh          # client build into static/
+sh teamstats/rebuild-local.sh # client build into static/
 ACCESS_KEY=secret PORT=8095 sh teamstats/start.sh
 ```
 

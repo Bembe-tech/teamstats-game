@@ -2,10 +2,10 @@ import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { KingOfTheHillExecution } from "./execution/KingOfTheHillExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
-import { KingOfTheHillExecution } from "./execution/KingOfTheHillExecution";
 import {
   AllPlayers,
   BuildableUnit,

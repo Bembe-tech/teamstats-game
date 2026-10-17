@@ -9,7 +9,11 @@ const ALLY = 2;
 const ENEMY = 3;
 
 function view(spawnPhase: boolean) {
-  const me = { smallID: () => ME, isAlive: () => true, isFriendly: (p: { smallID(): number }) => p.smallID() === ALLY };
+  const me = {
+    smallID: () => ME,
+    isAlive: () => true,
+    isFriendly: (p: { smallID(): number }) => p.smallID() === ALLY,
+  };
   const ally = { smallID: () => ALLY };
   const enemy = { smallID: () => ENEMY };
   return {
@@ -21,7 +25,14 @@ function view(spawnPhase: boolean) {
   } as never;
 }
 
-function frame(tick: number, tiles: Uint16Array, units: object[] = [], deadUnits: object[] = [], rails: Uint8Array = new Uint8Array(W * H), railroadDirty = false) {
+function frame(
+  tick: number,
+  tiles: Uint16Array,
+  units: object[] = [],
+  deadUnits: object[] = [],
+  rails: Uint8Array = new Uint8Array(W * H),
+  railroadDirty = false,
+) {
   return {
     tick,
     inSpawnPhase: false,
@@ -64,7 +75,9 @@ describe("Fog of War", () => {
     const fog = new FogOfWar(W, H);
     const tiles = world();
     tiles[ref(12, 12)] = ENEMY; // right next to me
-    const out = fog.filter(view(true), frame(1, tiles)) as unknown as { tileState: Uint16Array };
+    const out = fog.filter(view(true), frame(1, tiles)) as unknown as {
+      tileState: Uint16Array;
+    };
     expect(out.tileState[ref(1, 1)]).toBe(ME);
     expect(out.tileState[ref(12, 12)]).toBe(0);
     expect(out.tileState[ref(150, 150)]).toBe(0);
@@ -76,9 +89,19 @@ describe("Fog of War", () => {
     const tiles = world();
     fog.filter(view(false), frame(1, tiles));
     expect(fog.hidesTile(ref(150, 150))).toBe(true);
-    fog.filter(view(false), frame(2, tiles, [{ unitType: "Atom Bomb", ownerID: ALLY, pos: ref(150, 150) }]));
+    fog.filter(
+      view(false),
+      frame(2, tiles, [
+        { unitType: "Atom Bomb", ownerID: ALLY, pos: ref(150, 150) },
+      ]),
+    );
     expect(fog.hidesTile(ref(150, 150))).toBe(true);
-    fog.filter(view(false), frame(3, tiles, [{ unitType: "Atom Bomb", ownerID: ME, pos: ref(150, 150) }]));
+    fog.filter(
+      view(false),
+      frame(3, tiles, [
+        { unitType: "Atom Bomb", ownerID: ME, pos: ref(150, 150) },
+      ]),
+    );
     expect(fog.hidesTile(ref(150, 150))).toBe(false);
   });
 
@@ -86,7 +109,12 @@ describe("Fog of War", () => {
     const fog = new FogOfWar(W, H);
     const tiles = world();
     fog.filter(view(false), frame(1, tiles));
-    const boom = { unitType: "Atom Bomb", pos: ref(150, 150), reachedTarget: true, ownerSmallID: ME };
+    const boom = {
+      unitType: "Atom Bomb",
+      pos: ref(150, 150),
+      reachedTarget: true,
+      ownerSmallID: ME,
+    };
     fog.filter(view(false), frame(10, tiles, [], [boom]));
     expect(fog.hidesTile(ref(150, 150))).toBe(false);
     fog.filter(view(false), frame(65, tiles));
@@ -102,7 +130,10 @@ describe("Fog of War", () => {
     fog.filter(view(false), frame(1, tiles, [], [], rails));
     rails[ref(150, 150)] = 1; // enemy rail far away
     rails[ref(5, 12)] = 1; // rail next to my land
-    const out = fog.filter(view(false), frame(2, tiles, [], [], rails, true)) as unknown as { railroadState: Uint8Array; railroadDirty: boolean };
+    const out = fog.filter(
+      view(false),
+      frame(2, tiles, [], [], rails, true),
+    ) as unknown as { railroadState: Uint8Array; railroadDirty: boolean };
     expect(out.railroadDirty).toBe(true);
     expect(out.railroadState[ref(5, 12)]).toBe(1);
     expect(out.railroadState[ref(150, 150)]).toBe(0);
@@ -121,7 +152,17 @@ describe("Fog of War", () => {
     const tiles = world();
     fog.filter(view(false), frame(1, tiles));
     expect(fog.hidesTile(ref(150, 150))).toBe(true);
-    fog.filter(view(false), frame(2, tiles, [{ unitType: "Transport", ownerID: ME, pos: ref(15, 15), targetTile: ref(150, 150) }]));
+    fog.filter(
+      view(false),
+      frame(2, tiles, [
+        {
+          unitType: "Transport",
+          ownerID: ME,
+          pos: ref(15, 15),
+          targetTile: ref(150, 150),
+        },
+      ]),
+    );
     expect(fog.hidesTile(ref(150, 150))).toBe(false);
   });
 });

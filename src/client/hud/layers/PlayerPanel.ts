@@ -17,6 +17,7 @@ import { fetchLobbyListed } from "../../Api";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
+import { FogOfWar } from "../../FogOfWar";
 import {
   CloseViewEvent,
   MouseUpEvent,
@@ -31,7 +32,6 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { FogOfWar } from "../../FogOfWar";
 import { UIState } from "../../UIState";
 import {
   renderDuration,

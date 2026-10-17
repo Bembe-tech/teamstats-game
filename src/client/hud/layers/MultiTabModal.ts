@@ -8,6 +8,9 @@ import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 
+// TeamStats.Pro: hosts test their lobby from a second tab; no multi-tab penalty
+const MULTI_TAB_PENALTY = false;
+
 @customElement("multi-tab-modal")
 export class MultiTabModal extends LitElement implements Controller {
   public game: GameView;
@@ -29,9 +32,8 @@ export class MultiTabModal extends LitElement implements Controller {
   }
 
   tick() {
-    // TeamStats.Pro: hosts test their lobby from a second tab; no multi-tab penalty
     if (
-      true ||
+      !MULTI_TAB_PENALTY ||
       this.game.inSpawnPhase() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
       ClientEnv.env() === GameEnv.Dev ||

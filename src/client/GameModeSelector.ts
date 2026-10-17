@@ -651,21 +651,32 @@ export class GameModeSelector extends LitElement {
   // renderOpenFrontHome() but is not shown.
   render() {
     const icon = (d: string) =>
-      html`<svg class="ts-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d=${d}></path></svg>`;
+      html`<svg
+        class="ts-ico"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d=${d}></path>
+      </svg>`;
     const card = (
       cls: string,
       title: string,
       text: string,
       ico: TemplateResult,
       onClick: () => void,
-    ) => html`<button type="button" class="ts-action ${cls}" @click=${onClick}>
-      <span class="ts-action-ico">${ico}</span>
-      <span class="ts-action-body">
-        <span class="ts-action-title">${title}</span>
-        <span class="ts-action-text">${text}</span>
-      </span>
-      <span class="ts-action-arrow">›</span>
-    </button>`;
+    ) =>
+      html`<button type="button" class="ts-action ${cls}" @click=${onClick}>
+        <span class="ts-action-ico">${ico}</span>
+        <span class="ts-action-body">
+          <span class="ts-action-title">${title}</span>
+          <span class="ts-action-text">${text}</span>
+        </span>
+        <span class="ts-action-arrow">›</span>
+      </button>`;
     return html`
       <div class="ts-home">
         <section class="ts-hero">
@@ -683,21 +694,25 @@ export class GameModeSelector extends LitElement {
                 "ts-primary",
                 "Host a lobby",
                 "Log in to create your own lobby and invite players",
-                icon("M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"),
+                icon(
+                  "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
+                ),
                 () => location.assign("/host"),
               )
             : card(
-            "ts-primary",
-            translateText("main.create"),
-            "Pick a map and options, then invite players with a link",
-            icon("M12 5v14M5 12h14"),
-            this.openHostLobby,
-          )}
+                "ts-primary",
+                translateText("main.create"),
+                "Pick a map and options, then invite players with a link",
+                icon("M12 5v14M5 12h14"),
+                this.openHostLobby,
+              )}
           ${card(
             "",
             translateText("main.join"),
             "Got an invite link or lobby code? Jump in",
-            icon("M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"),
+            icon(
+              "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
+            ),
             this.openJoinLobby,
           )}
         </div>

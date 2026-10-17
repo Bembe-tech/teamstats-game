@@ -1,4 +1,3 @@
-import { FogOfWar } from "../../FogOfWar";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
@@ -13,6 +12,7 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { Controller } from "../../Controller";
+import { FogOfWar } from "../../FogOfWar";
 import {
   ContextMenuEvent,
   MouseMoveEvent,

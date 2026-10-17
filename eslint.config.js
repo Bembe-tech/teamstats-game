@@ -18,6 +18,8 @@ export default [
       "src/server/gatekeeper/**",
       "tests/pathfinding/playground/**",
       ".claude/**",
+      // TeamStats.Pro: standalone Node scripts, not part of the TS project
+      "teamstats/**",
     ],
   },
   { files: ["**/*.{js,mjs,cjs,ts}"] },

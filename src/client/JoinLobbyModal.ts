@@ -737,7 +737,10 @@ export class JoinLobbyModal extends BaseModal {
   private renderNicknameField() {
     if (!this.isPrivateLobby()) return html``;
     const input = document.querySelector("username-input") as
-      | (HTMLElement & { getUsername(): string; setUsername(n: string): boolean })
+      | (HTMLElement & {
+          getUsername(): string;
+          setUsername(n: string): boolean;
+        })
       | null;
     if (input === null) return html``;
     const save = (e: Event) => {

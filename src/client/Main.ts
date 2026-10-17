@@ -681,10 +681,8 @@ class Client {
       } else {
         updateAccountNavButton(userMeResponse);
       }
-      const isAdFree =
-        userMeResponse !== false && userMeResponse.player?.adfree === true;
-      // StreamLobby: no ads
-      window.adsEnabled = false && !isAdFree;
+      // TeamStats.Pro: no ads
+      window.adsEnabled = false;
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is

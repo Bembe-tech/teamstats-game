@@ -18,26 +18,28 @@ export class PlayerStats extends StatsTable {
   ): StatsRow[] {
     const myPlayer = game.myPlayer();
 
-    return game
-      .playerViews()
-      .filter((player) => player.isAlive())
-      // TeamStats.Pro: with Fog of War, only players you can see
-      .filter((player) => !FogOfWar.current?.hidesPlayer(player.smallID()))
-      .map((player) => ({
-        key: player.id(),
-        name: player.name(),
-        clanTag: player.clanTag(),
-        values: columnValues(player, game, columns),
-        emphasized:
-          myPlayer !== null &&
-          (player === myPlayer || player.isOnSameTeam(myPlayer)),
-        pinned: player === myPlayer,
-        fogged: FogOfWar.current?.hidesStatsOf(player.smallID()) ?? false,
-        onClick: () => {
-          if (this.eventBus !== null) {
-            this.eventBus.emit(new GoToPlayerEvent(player));
-          }
-        },
-      }));
+    return (
+      game
+        .playerViews()
+        .filter((player) => player.isAlive())
+        // TeamStats.Pro: with Fog of War, only players you can see
+        .filter((player) => !FogOfWar.current?.hidesPlayer(player.smallID()))
+        .map((player) => ({
+          key: player.id(),
+          name: player.name(),
+          clanTag: player.clanTag(),
+          values: columnValues(player, game, columns),
+          emphasized:
+            myPlayer !== null &&
+            (player === myPlayer || player.isOnSameTeam(myPlayer)),
+          pinned: player === myPlayer,
+          fogged: FogOfWar.current?.hidesStatsOf(player.smallID()) ?? false,
+          onClick: () => {
+            if (this.eventBus !== null) {
+              this.eventBus.emit(new GoToPlayerEvent(player));
+            }
+          },
+        }))
+    );
   }
 }

@@ -192,7 +192,7 @@ export class FogOfWar {
     const trails = frame.trailState;
     const rails = frame.railroadState;
     const friendly = this.friendly;
-    let full = !this.initialized || frame.changedTiles === null;
+    const full = !this.initialized || frame.changedTiles === null;
     const changed: number[] = [];
     let trailMin = frame.trailDirtyRowMin;
     let trailMax = frame.trailDirtyRowMax;
@@ -309,8 +309,7 @@ export class FogOfWar {
     );
     const bonusEvents = frame.events.bonusEvents.filter(
       (e) =>
-        friendly[e.smallID & OWNER_MASK] ||
-        this.vis[this.cellOf(e.tile)] === 1,
+        friendly[e.smallID & OWNER_MASK] || this.vis[this.cellOf(e.tile)] === 1,
     );
     const attackRings: AttackRingInput[] = frame.attackRings.filter((r) =>
       this.visibleXY(r.x, r.y),
@@ -431,13 +430,18 @@ export class FogOfWar {
       this.seenPlayers.set(friendly);
       return;
     }
-    for (let i = 0; i < dist.length; i++) this.vis[i] = dist[i] <= limit ? 1 : 0;
+    for (let i = 0; i < dist.length; i++)
+      this.vis[i] = dist[i] <= limit ? 1 : 0;
 
     // Own boats: where they will land (so you see what you sail into).
     for (const u of frame.units.values()) {
       if ((u.ownerID & OWNER_MASK) !== this.mySmallID) continue;
       if (u.unitType === UnitType.TransportShip && u.targetTile !== null) {
-        this.stamp(u.targetTile % w, (u.targetTile / w) | 0, BOAT_TARGET_VISION);
+        this.stamp(
+          u.targetTile % w,
+          (u.targetTile / w) | 0,
+          BOAT_TARGET_VISION,
+        );
       }
     }
     // Own nukes: the missile in flight and its recent blasts.
@@ -512,7 +516,10 @@ export class FogOfWar {
     const cssW = glCanvas.clientWidth;
     const cssH = glCanvas.clientHeight;
     const dpr = window.devicePixelRatio || 1;
-    if (c.width !== Math.round(cssW * dpr) || c.height !== Math.round(cssH * dpr)) {
+    if (
+      c.width !== Math.round(cssW * dpr) ||
+      c.height !== Math.round(cssH * dpr)
+    ) {
       c.width = Math.round(cssW * dpr);
       c.height = Math.round(cssH * dpr);
       this.lastCam = "";

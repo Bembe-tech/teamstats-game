@@ -347,10 +347,8 @@ export class LobbyTeamView extends LitElement {
         }}
         @drop=${(e: DragEvent) => {
           e.preventDefault();
-          this.moveTo(
-            preview.team,
-            e.dataTransfer?.getData("text/plain") || null,
-          );
+          const id = e.dataTransfer?.getData("text/plain");
+          this.moveTo(preview.team, id === undefined || id === "" ? null : id);
         }}
         @click=${() => this.moveTo(preview.team, this.movingClientID)}
       >

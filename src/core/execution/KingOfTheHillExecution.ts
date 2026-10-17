@@ -3,7 +3,14 @@
 // the crown icon. Every second the crown holder gets a second of crown time.
 // When the lobby's time is up (kingOfTheHillMinutes, default 30) the player (or, in team games, the team) with the most
 // crown time wins. WinCheckExecution's land win is off in this mode.
-import { Execution, Game, GameMode, Player, PlayerType, Team } from "../game/Game";
+import {
+  Execution,
+  Game,
+  GameMode,
+  Player,
+  PlayerType,
+  Team,
+} from "../game/Game";
 
 export class KingOfTheHillExecution implements Execution {
   private active = true;

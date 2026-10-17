@@ -1,14 +1,12 @@
 import { html, nothing } from "lit";
-import { getMapName } from "./Utils";
-import { notableLobbySettings } from "./utilities/LobbySettingsSummary";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
+  copyToClipboard,
   getSecondsUntilServerTimestamp,
   renderDuration,
   showToast,
-  copyToClipboard,
   translateText,
 } from "../client/Utils";
 import { GameEnv } from "../core/configuration/Config";
@@ -44,7 +42,6 @@ import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";
 import "./components/PlutoniumIcon";
 import "./components/ToggleInputCard";
-import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -61,6 +58,8 @@ import {
   sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
+import { notableLobbySettings } from "./utilities/LobbySettingsSummary";
+import { getMapName } from "./Utils";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
@@ -119,8 +118,7 @@ export class HostLobbyModal extends BaseModal {
     | "mode"
     | "options"
     | "units"
-    | "players" =
-    "map";
+    | "players" = "map";
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -415,15 +413,16 @@ export class HostLobbyModal extends BaseModal {
       text: string,
       toggle: () => void,
       extra: unknown = nothing,
-    ) => html`<div class="ts-mode ${on ? "ts-mode-on" : ""}">
-      <button type="button" class="ts-mode-head" @click=${toggle}>
-        <span class="ts-mode-ico">${icon}</span>
-        <span class="ts-mode-title">${title}</span>
-        <span class="ts-switch ${on ? "on" : ""}" aria-hidden="true"></span>
-      </button>
-      <p class="ts-mode-text">${text}</p>
-      ${extra}
-    </div>`;
+    ) =>
+      html`<div class="ts-mode ${on ? "ts-mode-on" : ""}">
+        <button type="button" class="ts-mode-head" @click=${toggle}>
+          <span class="ts-mode-ico">${icon}</span>
+          <span class="ts-mode-title">${title}</span>
+          <span class="ts-switch ${on ? "on" : ""}" aria-hidden="true"></span>
+        </button>
+        <p class="ts-mode-text">${text}</p>
+        ${extra}
+      </div>`;
     return html`<section class="ts-modes-tab">
       <div class="ts-modes-intro">
         <h3 class="ts-h">TeamStats Gamemodes</h3>
@@ -586,13 +585,23 @@ export class HostLobbyModal extends BaseModal {
         <div class="ts-side-map-name">${mapName}</div>
       </div>
       <div class="ts-side-facts">
-        <div><span>${translateText("host_modal.mode")}</span><b>${mode}</b></div>
+        <div>
+          <span>${translateText("host_modal.mode")}</span><b>${mode}</b>
+        </div>
         <div>
           <span>${translateText("difficulty.difficulty")}</span
-          ><b>${translateText(`difficulty.${String(this.selectedDifficulty).toLowerCase()}`)}</b>
+          ><b
+            >${translateText(
+              `difficulty.${String(this.selectedDifficulty).toLowerCase()}`,
+            )}</b
+          >
         </div>
-        <div><span>${translateText("host_modal.players")}</span><b>${players}</b></div>
-        <div><span>Bots / Nations</span><b>${this.bots} / ${this.nations}</b></div>
+        <div>
+          <span>${translateText("host_modal.players")}</span><b>${players}</b>
+        </div>
+        <div>
+          <span>Bots / Nations</span><b>${this.bots} / ${this.nations}</b>
+        </div>
       </div>
       <div class="ts-side-opts">
         <div class="ts-side-label">Enabled</div>
@@ -837,191 +846,191 @@ export class HostLobbyModal extends BaseModal {
       <div class="ts-lobby flex flex-col h-full">
         ${this.renderTabs()}
         <div class="ts-lobby-main">
-        <div
-          class="ts-lobby-content flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6"
-        >
-          ${this.publiclyListed
-            ? html`<div
-                class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300"
-              >
-                ${translateText("host_modal.settings_locked_listed")}
-              </div>`
-            : nothing}
-          <!-- Players joined a listed lobby for its advertised settings, so
+          <div
+            class="ts-lobby-content flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6"
+          >
+            ${this.publiclyListed
+              ? html`<div
+                  class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300"
+                >
+                  ${translateText("host_modal.settings_locked_listed")}
+                </div>`
+              : nothing}
+            <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
-          ${this.tab === "gamemodes" ? this.renderGamemodes() : nothing}
-          <game-config-settings
-            class="${this.tab === "players" || this.tab === "gamemodes"
-              ? "hidden"
-              : "block"} ${this.publiclyListed ? "opacity-60" : ""}"
-            ?inert=${this.publiclyListed}
-            .sectionGapClass=${"space-y-10"}
-            .settings=${{
-              map: {
-                selected: this.selectedMap,
-                useRandom: this.useRandomMap,
-                randomMapDivider: true,
-              },
-              difficulty: {
-                selected: this.selectedDifficulty,
-                disabled: this.nations === 0,
-              },
-              gameMode: {
-                selected: this.gameMode,
-              },
-              teamCount: {
-                selected: this.teamCount,
-              },
-              options: {
-                titleKey: "game_settings.options",
-                bots: {
-                  value: this.bots,
-                  labelKey: "game_settings.bots",
-                  disabledKey: "common.disabled",
+            ${this.tab === "gamemodes" ? this.renderGamemodes() : nothing}
+            <game-config-settings
+              class="${this.tab === "players" || this.tab === "gamemodes"
+                ? "hidden"
+                : "block"} ${this.publiclyListed ? "opacity-60" : ""}"
+              ?inert=${this.publiclyListed}
+              .sectionGapClass=${"space-y-10"}
+              .settings=${{
+                map: {
+                  selected: this.selectedMap,
+                  useRandom: this.useRandomMap,
+                  randomMapDivider: true,
                 },
-                nations: {
-                  value: this.nations,
-                  defaultValue: this.defaultNationCount,
-                  labelKey: "game_settings.nations",
-                  disabledKey: "common.disabled",
+                difficulty: {
+                  selected: this.selectedDifficulty,
+                  disabled: this.nations === 0,
                 },
-                toggles: [
-                  {
-                    labelKey: "game_settings.instant_build",
-                    checked: this.instantBuild,
+                gameMode: {
+                  selected: this.gameMode,
+                },
+                teamCount: {
+                  selected: this.teamCount,
+                },
+                options: {
+                  titleKey: "game_settings.options",
+                  bots: {
+                    value: this.bots,
+                    labelKey: "game_settings.bots",
+                    disabledKey: "common.disabled",
                   },
-                  {
-                    labelKey: "game_settings.random_spawn",
-                    checked: this.randomSpawn,
+                  nations: {
+                    value: this.nations,
+                    defaultValue: this.defaultNationCount,
+                    labelKey: "game_settings.nations",
+                    disabledKey: "common.disabled",
                   },
-                  {
-                    labelKey: "host_modal.donate_gold",
-                    checked: this.donateGold,
-                  },
-                  {
-                    labelKey: "host_modal.donate_troops",
-                    checked: this.donateTroops,
-                  },
-                  {
-                    labelKey: "game_settings.infinite_gold",
-                    checked: this.infiniteGold,
-                  },
-                  {
-                    labelKey: "game_settings.infinite_troops",
-                    checked: this.infiniteTroops,
-                  },
-                  {
-                    labelKey: "game_settings.compact_map",
-                    checked: this.compactMap,
-                  },
-                  {
-                    labelKey: "host_modal.anonymous_players",
-                    checked: this.anonymizeNames,
-                  },
-                  {
-                    labelKey: "game_settings.water_nukes",
-                    checked: this.waterNukes,
-                  },
-                  {
-                    labelKey: "game_settings.doomsday_clock",
-                    checked: this.doomsdayClock,
-                    doomsdayClockSpeed: this.doomsdayClockSpeed,
-                  },
-                  // Host cheats and public listing are mutually exclusive
-                  // (the server rejects both combinations), so the controls
-                  // disappear while the lobby is listed.
-                  ...(this.publiclyListed
-                    ? []
-                    : [
-                        {
-                          labelKey: "host_modal.host_cheats",
-                          checked: this.hostCheatsEnabled,
-                        },
-                      ]),
-                ],
-                inputCards,
-              },
-              hostCheats: {
-                titleKey: "host_modal.host_cheats",
-                visible: this.hostCheatsEnabled && !this.publiclyListed,
-                toggles: [
-                  {
-                    labelKey: "game_settings.infinite_gold",
-                    checked: this.hostCheatInfiniteGold,
-                  },
-                  {
-                    labelKey: "game_settings.infinite_troops",
-                    checked: this.hostCheatInfiniteTroops,
-                  },
-                ],
-                inputCards: hostCheatInputCards,
-              },
-              unitTypes: {
-                titleKey: "game_settings.disable_units",
-                disabledUnits: this.disabledUnits,
-              },
-            }}
-            @map-selected=${this.handleConfigMapSelected}
-            @random-map-selected=${this.handleConfigRandomMapSelected}
-            @difficulty-selected=${this.handleConfigDifficultySelected}
-            @doomsday-clock-speed-selected=${this
-              .handleConfigDoomsdayClockSpeedSelected}
-            @game-mode-selected=${this.handleConfigGameModeSelected}
-            @team-count-selected=${this.handleConfigTeamCountSelected}
-            @bots-changed=${this.handleBotsChange}
-            @nations-changed=${this.handleNationsChange}
-            @option-toggle-changed=${this.handleConfigOptionToggleChanged}
-            @host-cheat-toggle-changed=${this
-              .handleConfigHostCheatToggleChanged}
-            @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
-            .section=${this.tab === "players" || this.tab === "gamemodes"
-              ? "map"
-              : this.tab}
-          ></game-config-settings>
+                  toggles: [
+                    {
+                      labelKey: "game_settings.instant_build",
+                      checked: this.instantBuild,
+                    },
+                    {
+                      labelKey: "game_settings.random_spawn",
+                      checked: this.randomSpawn,
+                    },
+                    {
+                      labelKey: "host_modal.donate_gold",
+                      checked: this.donateGold,
+                    },
+                    {
+                      labelKey: "host_modal.donate_troops",
+                      checked: this.donateTroops,
+                    },
+                    {
+                      labelKey: "game_settings.infinite_gold",
+                      checked: this.infiniteGold,
+                    },
+                    {
+                      labelKey: "game_settings.infinite_troops",
+                      checked: this.infiniteTroops,
+                    },
+                    {
+                      labelKey: "game_settings.compact_map",
+                      checked: this.compactMap,
+                    },
+                    {
+                      labelKey: "host_modal.anonymous_players",
+                      checked: this.anonymizeNames,
+                    },
+                    {
+                      labelKey: "game_settings.water_nukes",
+                      checked: this.waterNukes,
+                    },
+                    {
+                      labelKey: "game_settings.doomsday_clock",
+                      checked: this.doomsdayClock,
+                      doomsdayClockSpeed: this.doomsdayClockSpeed,
+                    },
+                    // Host cheats and public listing are mutually exclusive
+                    // (the server rejects both combinations), so the controls
+                    // disappear while the lobby is listed.
+                    ...(this.publiclyListed
+                      ? []
+                      : [
+                          {
+                            labelKey: "host_modal.host_cheats",
+                            checked: this.hostCheatsEnabled,
+                          },
+                        ]),
+                  ],
+                  inputCards,
+                },
+                hostCheats: {
+                  titleKey: "host_modal.host_cheats",
+                  visible: this.hostCheatsEnabled && !this.publiclyListed,
+                  toggles: [
+                    {
+                      labelKey: "game_settings.infinite_gold",
+                      checked: this.hostCheatInfiniteGold,
+                    },
+                    {
+                      labelKey: "game_settings.infinite_troops",
+                      checked: this.hostCheatInfiniteTroops,
+                    },
+                  ],
+                  inputCards: hostCheatInputCards,
+                },
+                unitTypes: {
+                  titleKey: "game_settings.disable_units",
+                  disabledUnits: this.disabledUnits,
+                },
+              }}
+              @map-selected=${this.handleConfigMapSelected}
+              @random-map-selected=${this.handleConfigRandomMapSelected}
+              @difficulty-selected=${this.handleConfigDifficultySelected}
+              @doomsday-clock-speed-selected=${this
+                .handleConfigDoomsdayClockSpeedSelected}
+              @game-mode-selected=${this.handleConfigGameModeSelected}
+              @team-count-selected=${this.handleConfigTeamCountSelected}
+              @bots-changed=${this.handleBotsChange}
+              @nations-changed=${this.handleNationsChange}
+              @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+              @host-cheat-toggle-changed=${this
+                .handleConfigHostCheatToggleChanged}
+              @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
+              .section=${this.tab === "players" || this.tab === "gamemodes"
+                ? "map"
+                : this.tab}
+            ></game-config-settings>
 
-          <lobby-player-view
-            class=${this.tab === "players" ? "block" : "hidden"}
-            .gameMode=${this.gameMode}
-            .clients=${this.clients}
-            .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-            .currentClientID=${this.lobbyCreatorClientID}
-            .teamCount=${this.teamCount}
-            .nationCount=${this.nations}
-            .onKickPlayer=${this.publiclyListed
-              ? undefined
-              : (clientID: string) => this.kickPlayer(clientID)}
-            .onToggleNameReveal=${this.publiclyListed
-              ? undefined
-              : (clientID: string) => this.toggleNameReveal(clientID)}
-            .nameReveals=${this.nameReveals}
-            .anonymizeNames=${this.anonymizeNames}
-            .onMovePlayer=${(clientID: string, team: number) => {
-              this.teamPins = [
-                ...this.teamPins.filter((p) => p.clientID !== clientID),
-                { clientID, team },
-              ];
-              this.putGameConfig();
-            }}
-          ></lobby-player-view>
-        </div>
-
-        <!-- TeamStats.Pro side panel: map, mode, options, invite link, start -->
-        <aside class="ts-side">
-          ${this.renderSideSummary()}
-          <div class="ts-start">
-          ${this.renderStartIn()}
-          <o-button
-            variant=${secondsRemaining !== null ? "warning" : "primary"}
-            width="block"
-            size="lg"
-            .title=${statusLabel}
-            .uppercase=${secondsRemaining === null}
-            ?disable=${this.queued ||
-            (this.lobbyStartAt === null && this.clients.length < 1)}
-            @click=${this.toggleGameStartTimer}
-          ></o-button>
+            <lobby-player-view
+              class=${this.tab === "players" ? "block" : "hidden"}
+              .gameMode=${this.gameMode}
+              .clients=${this.clients}
+              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+              .currentClientID=${this.lobbyCreatorClientID}
+              .teamCount=${this.teamCount}
+              .nationCount=${this.nations}
+              .onKickPlayer=${this.publiclyListed
+                ? undefined
+                : (clientID: string) => this.kickPlayer(clientID)}
+              .onToggleNameReveal=${this.publiclyListed
+                ? undefined
+                : (clientID: string) => this.toggleNameReveal(clientID)}
+              .nameReveals=${this.nameReveals}
+              .anonymizeNames=${this.anonymizeNames}
+              .onMovePlayer=${(clientID: string, team: number) => {
+                this.teamPins = [
+                  ...this.teamPins.filter((p) => p.clientID !== clientID),
+                  { clientID, team },
+                ];
+                this.putGameConfig();
+              }}
+            ></lobby-player-view>
           </div>
-        </aside>
+
+          <!-- TeamStats.Pro side panel: map, mode, options, invite link, start -->
+          <aside class="ts-side">
+            ${this.renderSideSummary()}
+            <div class="ts-start">
+              ${this.renderStartIn()}
+              <o-button
+                variant=${secondsRemaining !== null ? "warning" : "primary"}
+                width="block"
+                size="lg"
+                .title=${statusLabel}
+                .uppercase=${secondsRemaining === null}
+                ?disable=${this.queued ||
+                (this.lobbyStartAt === null && this.clients.length < 1)}
+                @click=${this.toggleGameStartTimer}
+              ></o-button>
+            </div>
+          </aside>
         </div>
 
         ${this.showListLobbyDialog
@@ -1860,9 +1869,7 @@ export class HostLobbyModal extends BaseModal {
       : 0;
     return {
       gameMap: this.selectedMap,
-      gameMapSize: this.compactMap
-        ? GameMapSize.Compact
-        : GameMapSize.Normal,
+      gameMapSize: this.compactMap ? GameMapSize.Compact : GameMapSize.Normal,
       difficulty: this.selectedDifficulty,
       bots: this.bots,
       infiniteGold: this.infiniteGold,
@@ -1873,14 +1880,9 @@ export class HostLobbyModal extends BaseModal {
       randomSpawn: this.randomSpawn,
       gameMode: this.gameMode,
       disabledUnits: this.disabledUnits,
-      spawnImmunityDuration: this.spawnImmunity
-        ? spawnImmunityTicks
-        : null,
+      spawnImmunityDuration: this.spawnImmunity ? spawnImmunityTicks : null,
       playerTeams: this.teamCount,
-      nations: sliderToNationsConfig(
-        this.nations,
-        this.defaultNationCount,
-      ),
+      nations: sliderToNationsConfig(this.nations, this.defaultNationCount),
       maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
       startDelay: this.startDelayValue,
       goldMultiplier:
@@ -1915,9 +1917,9 @@ export class HostLobbyModal extends BaseModal {
       fogOfWar: this.fogOfWar ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
-        kingOfTheHillMinutes: this.kingOfTheHill
-          ? (this.kingOfTheHillMinutes ?? 30)
-          : null,
+      kingOfTheHillMinutes: this.kingOfTheHill
+        ? (this.kingOfTheHillMinutes ?? 30)
+        : null,
       teamPins: this.teamPins,
       hostCheats: this.hostCheatsEnabled
         ? {

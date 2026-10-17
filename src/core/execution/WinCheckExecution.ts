@@ -41,7 +41,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
     // TeamStats.Pro King of the Hill: crown time decides (KingOfTheHillExecution)
-    if (this.mg.config().kingOfTheHill()) {
+    if (this.mg.config().kingOfTheHill?.()) {
       return;
     }
 

@@ -16,11 +16,19 @@ const WORKER_BASE = 3001;
 const NUM_WORKERS = Number(process.env.NUM_WORKERS || 1);
 const ACCESS_KEY = process.env.ACCESS_KEY || "";
 const PLAY_SECRET = String(process.env.PLAY_SECRET || "").trim();
-const PLAY_SITE = String(process.env.PLAY_SITE || "https://teamstats.pro").trim().replace(/\/+$/, "");
+const PLAY_SITE = String(process.env.PLAY_SITE || "https://teamstats.pro")
+  .trim()
+  .replace(/\/+$/, "");
 const COOKIE = "tsp_host";
 const USER_COOKIE = "tsp_user";
 const USER_COOKIE_MS = 30 * 24 * 3600 * 1000;
-const cookieValue = ACCESS_KEY ? crypto.createHash("sha256").update("tsp-host:" + ACCESS_KEY).digest("hex").slice(0, 32) : "";
+const cookieValue = ACCESS_KEY
+  ? crypto
+      .createHash("sha256")
+      .update("tsp-host:" + ACCESS_KEY)
+      .digest("hex")
+      .slice(0, 32)
+  : "";
 const ticketsOn = PLAY_SECRET.length >= 16;
 
 function route(url) {
@@ -29,7 +37,11 @@ function route(url) {
     const q = url.includes("?") ? url.slice(url.indexOf("?")) : "";
     return { port: WORKER_BASE + Number(m[1]), path: (m[2] || "/") + q };
   }
-  if (/^\/api\/create_game(\?|$)/.test(url)) return { port: WORKER_BASE + Math.floor(Math.random() * NUM_WORKERS), path: url };
+  if (/^\/api\/create_game(\?|$)/.test(url))
+    return {
+      port: WORKER_BASE + Math.floor(Math.random() * NUM_WORKERS),
+      path: url,
+    };
   return { port: MASTER, path: url };
 }
 
@@ -41,8 +53,11 @@ function cookies(req) {
   }
   return out;
 }
-const sign = s => crypto.createHmac("sha256", PLAY_SECRET).update(s).digest("base64url");
-const sameSig = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const sign = (s) =>
+  crypto.createHmac("sha256", PLAY_SECRET).update(s).digest("base64url");
+const sameSig = (a, b) =>
+  a.length === b.length &&
+  crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 // Signed value: base64url(JSON) + "." + HMAC(prefix + body). Returns the JSON when the signature fits and exp is ahead.
 function readSigned(v, prefix) {
   if (!ticketsOn || !v) return null;
@@ -51,17 +66,22 @@ function readSigned(v, prefix) {
   try {
     const d = JSON.parse(Buffer.from(body, "base64url").toString());
     return d && d.id && d.exp > Date.now() ? d : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 // Ticket from the site (tanks3d.js format: {id, name, avatar, exp}, HMAC of the body alone).
-const readTicket = t => readSigned(t, "");
+const readTicket = (t) => readSigned(t, "");
 // Discord id of a host who came with a ticket (the player cookie), or "".
-const userId = req => String(readSigned(cookies(req)[USER_COOKIE], "u:")?.id || "");
+const userId = (req) =>
+  String(readSigned(cookies(req)[USER_COOKIE], "u:")?.id || "");
 function userCookie(id) {
-  const body = Buffer.from(JSON.stringify({ id, exp: Date.now() + USER_COOKIE_MS })).toString("base64url");
+  const body = Buffer.from(
+    JSON.stringify({ id, exp: Date.now() + USER_COOKIE_MS }),
+  ).toString("base64url");
   return `${USER_COOKIE}=${body}.${sign("u:" + body)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${USER_COOKIE_MS / 1000}`;
 }
-const hasKey = req => !!ACCESS_KEY && cookies(req)[COOKIE] === cookieValue;
+const hasKey = (req) => !!ACCESS_KEY && cookies(req)[COOKIE] === cookieValue;
 function hasAccess(req) {
   if (!ACCESS_KEY && !ticketsOn) return true;
   return hasKey(req) || !!userId(req);
@@ -83,12 +103,28 @@ const HOST_UI_COOKIE = "tsp_host_ui=1; Path=/; SameSite=Lax; Max-Age=31536000";
 // One open lobby or running game per ticket host: their last game id and its worker port.
 const lastGame = new Map();
 function gameExists(g) {
-  return new Promise(resolve => {
-    const r = http.get({ host: "127.0.0.1", port: g.port, path: `/api/game/${g.id}/exists`, timeout: 1500 }, res => {
-      let b = "";
-      res.on("data", c => { b += c; });
-      res.on("end", () => { try { resolve(!!JSON.parse(b).exists); } catch { resolve(false); } });
-    });
+  return new Promise((resolve) => {
+    const r = http.get(
+      {
+        host: "127.0.0.1",
+        port: g.port,
+        path: `/api/game/${g.id}/exists`,
+        timeout: 1500,
+      },
+      (res) => {
+        let b = "";
+        res.on("data", (c) => {
+          b += c;
+        });
+        res.on("end", () => {
+          try {
+            resolve(!!JSON.parse(b).exists);
+          } catch {
+            resolve(false);
+          }
+        });
+      },
+    );
     r.on("timeout", () => r.destroy());
     r.on("error", () => resolve(false));
   });
@@ -116,28 +152,50 @@ location.href="/game/"+m[1];};</script></body></html>`;
 
 // Passes the request on; with onDone the answer is buffered and handed over before it is sent.
 function proxy(req, res, t, onDone) {
-  const up = http.request({ host: "127.0.0.1", port: t.port, path: t.path, method: req.method, headers: req.headers }, r => {
-    if (!onDone) {
-      res.writeHead(r.statusCode, r.headers);
-      return r.pipe(res);
-    }
-    const parts = [];
-    r.on("data", c => parts.push(c));
-    r.on("end", () => {
-      const body = Buffer.concat(parts);
-      onDone(r.statusCode, body);
-      res.writeHead(r.statusCode, r.headers);
-      res.end(body);
-    });
+  const up = http.request(
+    {
+      host: "127.0.0.1",
+      port: t.port,
+      path: t.path,
+      method: req.method,
+      headers: req.headers,
+    },
+    (r) => {
+      if (!onDone) {
+        res.writeHead(r.statusCode, r.headers);
+        return r.pipe(res);
+      }
+      const parts = [];
+      r.on("data", (c) => parts.push(c));
+      r.on("end", () => {
+        const body = Buffer.concat(parts);
+        onDone(r.statusCode, body);
+        res.writeHead(r.statusCode, r.headers);
+        res.end(body);
+      });
+    },
+  );
+  up.on("error", () => {
+    if (!res.headersSent) res.writeHead(502);
+    res.end();
   });
-  up.on("error", () => { if (!res.headersSent) res.writeHead(502); res.end(); });
   req.pipe(up);
 }
 
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
-  if (ACCESS_KEY && u.pathname === "/" && u.searchParams.get("key") === ACCESS_KEY) {
-    res.writeHead(302, { "Set-Cookie": [`${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`, HOST_UI_COOKIE], Location: "/" });
+  if (
+    ACCESS_KEY &&
+    u.pathname === "/" &&
+    u.searchParams.get("key") === ACCESS_KEY
+  ) {
+    res.writeHead(302, {
+      "Set-Cookie": [
+        `${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
+        HOST_UI_COOKIE,
+      ],
+      Location: "/",
+    });
     return res.end();
   }
   // "Host a lobby" on the home page for browsers that are not hosts yet
@@ -151,33 +209,73 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    return res.end(INVITE_PAGE.replace("Paste the invite link", "Hosting needs the host link (it ends with <b>?key=…</b>). Got an invite instead? Paste the invite link"));
+    return res.end(
+      INVITE_PAGE.replace(
+        "Paste the invite link",
+        "Hosting needs the host link (it ends with <b>?key=…</b>). Got an invite instead? Paste the invite link",
+      ),
+    );
   }
   if (u.pathname === "/" && u.searchParams.has("ticket")) {
     const who = readTicket(u.searchParams.get("ticket"));
-    if (who) console.log(new Date().toISOString(), "host login", who.id, who.name || "");
-    res.writeHead(302, who ? { "Set-Cookie": [userCookie(String(who.id)), HOST_UI_COOKIE], Location: "/" } : { Location: "/" });
+    if (who)
+      console.log(
+        new Date().toISOString(),
+        "host login",
+        who.id,
+        who.name || "",
+      );
+    res.writeHead(
+      302,
+      who
+        ? {
+            "Set-Cookie": [userCookie(String(who.id)), HOST_UI_COOKIE],
+            Location: "/",
+          }
+        : { Location: "/" },
+    );
     return res.end();
   }
   // Hosts from before the hint cookie existed: give it once
-  if (u.pathname === "/" && hasAccess(req) && cookies(req).tsp_host_ui !== "1") {
+  if (
+    u.pathname === "/" &&
+    hasAccess(req) &&
+    cookies(req).tsp_host_ui !== "1"
+  ) {
     res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: req.url });
     return res.end();
   }
   if (isHostOnly(req) && !hasAccess(req)) {
-    if (/create_game/.test(req.url)) console.log(new Date().toISOString(), "create_game refused: no host key or Discord login", req.socket.remoteAddress);
+    if (/create_game/.test(req.url))
+      console.log(
+        new Date().toISOString(),
+        "create_game refused: no host key or Discord login",
+        req.socket.remoteAddress,
+      );
     res.writeHead(403, { "Content-Type": "text/html; charset=utf-8" });
     return res.end(INVITE_PAGE);
   }
-  if (/^\/(w\d+\/)?game\//.test(req.url)) console.log(new Date().toISOString(), req.socket.remoteAddress, req.url);
+  if (/^\/(w\d+\/)?game\//.test(req.url))
+    console.log(new Date().toISOString(), req.socket.remoteAddress, req.url);
   const t = route(req.url);
-  const uid = req.method === "POST" && /^\/(w\d+\/)?api\/create_game$/.test(u.pathname) && !hasKey(req) ? userId(req) : "";
+  const uid =
+    req.method === "POST" &&
+    /^\/(w\d+\/)?api\/create_game$/.test(u.pathname) &&
+    !hasKey(req)
+      ? userId(req)
+      : "";
   if (!uid) return proxy(req, res, t);
   // A successor of a finished game (?previous=) takes its place, so it is never blocked.
   const prev = lastGame.get(uid);
-  if (prev && !u.searchParams.has("previous") && await gameExists(prev)) {
+  if (prev && !u.searchParams.has("previous") && (await gameExists(prev))) {
     res.writeHead(429, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify({ error: "You already have an open lobby or game. Close it before you create another one.", gameID: prev.id }));
+    return res.end(
+      JSON.stringify({
+        error:
+          "You already have an open lobby or game. Close it before you create another one.",
+        gameID: prev.id,
+      }),
+    );
   }
   proxy(req, res, t, (status, body) => {
     if (status !== 200) return;
@@ -192,13 +290,19 @@ server.on("upgrade", (req, socket, head) => {
   const t = route(req.url);
   const up = net.connect(t.port, "127.0.0.1", () => {
     let raw = `${req.method} ${t.path} HTTP/1.1\r\n`;
-    for (let i = 0; i < req.rawHeaders.length; i += 2) raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
+    for (let i = 0; i < req.rawHeaders.length; i += 2)
+      raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
     up.write(raw + "\r\n");
     if (head && head.length) up.write(head);
-    up.pipe(socket); socket.pipe(up);
+    up.pipe(socket);
+    socket.pipe(up);
   });
   up.on("error", () => socket.destroy());
   socket.on("error", () => up.destroy());
 });
 
-server.listen(PORT, () => console.log(`TeamStats.Pro front on :${PORT} (master ${MASTER}, ${NUM_WORKERS} worker(s)${ticketsOn ? ", Discord hosts on" : ""})`));
+server.listen(PORT, () =>
+  console.log(
+    `TeamStats.Pro front on :${PORT} (master ${MASTER}, ${NUM_WORKERS} worker(s)${ticketsOn ? ", Discord hosts on" : ""})`,
+  ),
+);

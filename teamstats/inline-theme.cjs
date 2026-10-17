@@ -9,7 +9,10 @@ const file = path.join(root, "index.html");
 let html = fs.readFileSync(file, "utf8");
 const block = `<!-- ts-theme:start -->\n    <style id="ts-theme">\n${css}\n    </style>\n    <!-- ts-theme:end -->`;
 if (html.includes("<!-- ts-theme:start -->")) {
-  html = html.replace(/<!-- ts-theme:start -->[\s\S]*?<!-- ts-theme:end -->/, block);
+  html = html.replace(
+    /<!-- ts-theme:start -->[\s\S]*?<!-- ts-theme:end -->/,
+    block,
+  );
 } else {
   html = html.replace("  </head>", `    ${block}\n  </head>`);
 }

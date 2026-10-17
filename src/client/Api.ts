@@ -2128,7 +2128,7 @@ export async function createLobby(): Promise<{
       if (response.status === 429) {
         let message = "You already have an open lobby or game.";
         try {
-          message = JSON.parse(errorText).error || message;
+          message = JSON.parse(errorText).error ?? message;
         } catch {
           // not JSON: keep the default text
         }

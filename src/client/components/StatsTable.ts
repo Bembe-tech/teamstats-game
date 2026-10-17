@@ -121,7 +121,7 @@ export abstract class StatsTable extends LitElement {
    */
   private visibleColumns(): readonly ColumnDef[] {
     const selected = this.userSettings.statsColumns(this.tableKind);
-    const koth = this.game?.config().kingOfTheHill() ?? false;
+    const koth = this.game?.config().kingOfTheHill?.() ?? false;
     return columnsFor(this.tableKind).filter(
       (column) =>
         // TeamStats.Pro: the crown-time column only in King of the Hill

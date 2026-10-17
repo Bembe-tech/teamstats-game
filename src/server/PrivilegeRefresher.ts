@@ -3,12 +3,12 @@ import { Logger } from "winston";
 import { ReservedClanTagsResponseSchema } from "../core/ClanApiSchemas";
 import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
-import { ServerEnv } from "./ServerEnv";
 import {
   FailOpenPrivilegeChecker,
   PrivilegeChecker,
   PrivilegeCheckerImpl,
 } from "./Privilege";
+import { ServerEnv } from "./ServerEnv";
 
 // Refreshes the privilege checker every 3 minutes.
 // WARNING: This fails open if cosmetics.json is not available.
