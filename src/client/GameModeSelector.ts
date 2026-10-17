@@ -679,7 +679,13 @@ export class GameModeSelector extends LitElement {
         </section>
         <div class="ts-actions">
           ${!/(?:^|; )tsp_host_ui=1/.test(document.cookie)
-            ? nothing
+            ? card(
+                "ts-primary",
+                "Host a lobby",
+                "Log in to create your own lobby and invite players",
+                icon("M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"),
+                () => location.assign("/host"),
+              )
             : card(
             "ts-primary",
             translateText("main.create"),

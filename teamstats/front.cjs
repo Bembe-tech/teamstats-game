@@ -140,6 +140,19 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(302, { "Set-Cookie": [`${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`, HOST_UI_COOKIE], Location: "/" });
     return res.end();
   }
+  // "Host a lobby" on the home page for browsers that are not hosts yet
+  if (u.pathname === "/host") {
+    if (hasAccess(req) && (ACCESS_KEY || ticketsOn)) {
+      res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: "/" });
+      return res.end();
+    }
+    if (ticketsOn) {
+      res.writeHead(302, { Location: `${PLAY_SITE}/play` });
+      return res.end();
+    }
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    return res.end(INVITE_PAGE.replace("Paste the invite link", "Hosting needs the host link (it ends with <b>?key=…</b>). Got an invite instead? Paste the invite link"));
+  }
   if (u.pathname === "/" && u.searchParams.has("ticket")) {
     const who = readTicket(u.searchParams.get("ticket"));
     if (who) console.log(new Date().toISOString(), "host login", who.id, who.name || "");
