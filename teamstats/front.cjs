@@ -4,8 +4,10 @@
 // Also the gate: without the access cookie only /join/<id> links (and what the game loads) work;
 // /?key=<ACCESS_KEY> sets the cookie and opens the host panel.
 // Everyone logged in with Discord on teamstats.pro may host too: the site's /play hands over a short-lived
-// ticket signed with PLAY_SECRET (same value on both services), and /?ticket=<ticket> turns it into a signed
+// ticket signed with the site's own Ed25519 key, checked here with the public half from
+// PLAY_SITE/api/play/pubkey (no shared secret to set), and /?ticket=<ticket> turns it into a signed
 // player cookie. Such a host has one lobby or game at a time (key holders have no limit).
+// PLAY_SITE=off turns Discord hosts off.
 const http = require("http");
 const net = require("net");
 const crypto = require("crypto");
@@ -15,7 +17,6 @@ const MASTER = 3000;
 const WORKER_BASE = 3001;
 const NUM_WORKERS = Number(process.env.NUM_WORKERS || 1);
 const ACCESS_KEY = process.env.ACCESS_KEY || "";
-const PLAY_SECRET = String(process.env.PLAY_SECRET || "").trim();
 const PLAY_SITE = String(process.env.PLAY_SITE || "https://teamstats.pro")
   .trim()
   .replace(/\/+$/, "");
@@ -29,7 +30,33 @@ const cookieValue = ACCESS_KEY
       .digest("hex")
       .slice(0, 32)
   : "";
-const ticketsOn = PLAY_SECRET.length >= 16;
+const ticketsOn = PLAY_SITE !== "" && PLAY_SITE !== "off";
+// Signs the player cookie: stable across restarts when ACCESS_KEY is set, otherwise new per start
+// (hosts then just open /play again).
+const COOKIE_KEY = ACCESS_KEY
+  ? crypto
+      .createHash("sha256")
+      .update("tsp-user:" + ACCESS_KEY)
+      .digest()
+  : crypto.randomBytes(32);
+
+// The site's public ticket key, fetched on demand and kept for 10 minutes.
+let siteKey = { key: null, at: 0 };
+async function sitePublicKey(force) {
+  const age = Date.now() - siteKey.at;
+  if (siteKey.key && age < (force ? 60 * 1000 : 10 * 60 * 1000))
+    return siteKey.key;
+  try {
+    const r = await fetch(`${PLAY_SITE}/api/play/pubkey`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (r.ok)
+      siteKey = { key: crypto.createPublicKey(await r.text()), at: Date.now() };
+  } catch (e) {
+    console.error("Cannot fetch the site's ticket key:", e.message);
+  }
+  return siteKey.key;
+}
 
 function route(url) {
   const m = /^\/w(\d+)(\/.*)?$/.exec(url.split("?")[0]);
@@ -54,13 +81,13 @@ function cookies(req) {
   return out;
 }
 const sign = (s) =>
-  crypto.createHmac("sha256", PLAY_SECRET).update(s).digest("base64url");
+  crypto.createHmac("sha256", COOKIE_KEY).update(s).digest("base64url");
 const sameSig = (a, b) =>
   a.length === b.length &&
   crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 // Signed value: base64url(JSON) + "." + HMAC(prefix + body). Returns the JSON when the signature fits and exp is ahead.
 function readSigned(v, prefix) {
-  if (!ticketsOn || !v) return null;
+  if (!v) return null;
   const [body, sig] = String(v).split(".");
   if (!body || !sig || !sameSig(sig, sign(prefix + body))) return null;
   try {
@@ -70,8 +97,38 @@ function readSigned(v, prefix) {
     return null;
   }
 }
-// Ticket from the site (tanks3d.js format: {id, name, avatar, exp}, HMAC of the body alone).
-const readTicket = (t) => readSigned(t, "");
+// Ticket from the site's /play: base64url(JSON {id, name, aud, exp}) + "." + Ed25519 signature of the body.
+async function readTicket(t) {
+  if (!ticketsOn || !t) return null;
+  const [body, sig] = String(t).split(".");
+  if (!body || !sig) return null;
+  let d;
+  try {
+    d = JSON.parse(Buffer.from(body, "base64url").toString());
+  } catch {
+    return null;
+  }
+  if (!d || !d.id || d.aud !== "teamstats-game" || !(d.exp > Date.now()))
+    return null;
+  for (const force of [false, true]) {
+    const key = await sitePublicKey(force);
+    if (!key) return null;
+    try {
+      if (
+        crypto.verify(
+          null,
+          Buffer.from(body),
+          key,
+          Buffer.from(sig, "base64url"),
+        )
+      )
+        return d;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 // Discord id of a host who came with a ticket (the player cookie), or "".
 const userId = (req) =>
   String(readSigned(cookies(req)[USER_COOKIE], "u:")?.id || "");
@@ -217,7 +274,7 @@ const server = http.createServer(async (req, res) => {
     );
   }
   if (u.pathname === "/" && u.searchParams.has("ticket")) {
-    const who = readTicket(u.searchParams.get("ticket"));
+    const who = await readTicket(u.searchParams.get("ticket"));
     if (who)
       console.log(
         new Date().toISOString(),
