@@ -448,8 +448,11 @@ export async function startWorker() {
 
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;
+    const game = gm.game(lobbyId);
     res.json({
-      exists: gm.game(lobbyId) !== null,
+      exists: game !== null,
+      // TeamStats.Pro front: false once the game is finished, won, or left by its host
+      open: game !== null && game.holdsCreatorSlot(),
     });
   });
 

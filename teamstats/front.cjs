@@ -175,7 +175,9 @@ function gameExists(g) {
         });
         res.on("end", () => {
           try {
-            resolve(!!JSON.parse(b).exists);
+            const j = JSON.parse(b);
+            // "open" (newer workers): finished, won or host-left games free the slot
+            resolve(!!j.exists && j.open !== false);
           } catch {
             resolve(false);
           }

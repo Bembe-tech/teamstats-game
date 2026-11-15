@@ -1806,6 +1806,19 @@ export class GameServer {
     return hostCheatsEnabled(this.gameConfig.hostCheats);
   }
 
+  // TeamStats.Pro front (teamstats/front.cjs): does this game still count as the
+  // creator's one open lobby or game? Not once it is finished or decided (a
+  // winner was agreed), and not once a started game has lost its creator:
+  // a host who won and left, or never came back, can host again.
+  public holdsCreatorSlot(): boolean {
+    if (this.phase() === GamePhase.Finished) return false;
+    if (this.winnerVote.winner() !== null) return false;
+    if (!this.hasStarted()) return true;
+    return this.clients
+      .active()
+      .some((c) => c.persistentID === this.creatorPersistentID);
+  }
+
   public isCreator(persistentId: string): boolean {
     return (
       this.creatorPersistentID !== undefined &&
