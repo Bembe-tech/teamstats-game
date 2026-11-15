@@ -10,5 +10,7 @@ export GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2> /dev/null || ec
 export TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY:-none}"
 export API_KEY="${API_KEY:-$(node -e 'console.log(require("crypto").randomBytes(16).toString("hex"))')}"
 export ADMIN_BOT_API_KEY="${ADMIN_BOT_API_KEY:-$API_KEY}"
+# the workers hand finished games to the front on this port (SiteLink.ts -> /internal/game-result)
+export TSP_FRONT_PORT="${PORT:-8080}"
 node teamstats/front.cjs &
 exec npx tsx src/server/Server.ts

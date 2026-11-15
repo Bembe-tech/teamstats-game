@@ -44,6 +44,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
+import { tspPatternChoice } from "./TspPattern";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -1577,10 +1578,16 @@ export async function getPlayerCosmeticsRefs(
     effects[slot] = name;
   }
 
+  // TeamStats.Pro: a pattern picked from the teamstats.pro Skin Gallery in "Your Profile" (TspProfile.ts);
+  // the game server looks it up in the public gallery itself.
+  const tspPattern = tspPatternChoice();
+
   return {
     flag: flag ?? undefined,
-    patternName: pattern?.name ?? undefined,
-    patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+    patternName: tspPattern ?? pattern?.name ?? undefined,
+    patternColorPaletteName: tspPattern
+      ? undefined
+      : (pattern?.colorPalette?.name ?? undefined),
     skinName,
     crownName,
     effects: Object.keys(effects).length > 0 ? effects : undefined,

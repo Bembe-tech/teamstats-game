@@ -8,6 +8,12 @@
 // PLAY_SITE/api/play/pubkey (no shared secret to set), and /?ticket=<ticket> turns it into a signed
 // player cookie. Such a host has one lobby or game at a time (key holders have no limit).
 // PLAY_SITE=off turns Discord hosts off.
+// Site identity (Bembe 2026-11-15): the ticket also carries the player's name, clan tag and avatar from their
+// teamstats.pro account; the player cookie keeps them, /api/tsp/me hands them to the page (UsernameInput fills
+// the name and tag fields from it) and game sockets get an x-tsp-user header with the Discord id, so the
+// worker knows which player is which site account. Finished games come back from the worker to
+// /internal/game-result (loopback + API_KEY only), are signed here with a key made at start (public half at
+// /api/tsp/pubkey) and POSTed to PLAY_SITE/api/play/game-result, which stores them on the player's profile.
 const http = require("http");
 const net = require("net");
 const crypto = require("crypto");
@@ -20,6 +26,8 @@ const ACCESS_KEY = process.env.ACCESS_KEY || "";
 const PLAY_SITE = String(process.env.PLAY_SITE || "https://teamstats.pro")
   .trim()
   .replace(/\/+$/, "");
+// The site lets this User-Agent through its bot blocker for the game endpoints (JR-WEBPAGE bots.js).
+const GAME_UA = "TeamStatsPro-Game/1.0 (+https://teamstats.pro/play)";
 const COOKIE = "tsp_host";
 const USER_COOKIE = "tsp_user";
 const USER_COOKIE_MS = 30 * 24 * 3600 * 1000;
@@ -48,6 +56,7 @@ async function sitePublicKey(force) {
     return siteKey.key;
   try {
     const r = await fetch(`${PLAY_SITE}/api/play/pubkey`, {
+      headers: { "User-Agent": GAME_UA },
       signal: AbortSignal.timeout(4000),
     });
     if (r.ok)
@@ -130,11 +139,20 @@ async function readTicket(t) {
   return null;
 }
 // Discord id of a host who came with a ticket (the player cookie), or "".
-const userId = (req) =>
-  String(readSigned(cookies(req)[USER_COOKIE], "u:")?.id || "");
-function userCookie(id) {
+const siteUser = (req) => readSigned(cookies(req)[USER_COOKIE], "u:");
+const userId = (req) => String(siteUser(req)?.id || "");
+const short = (v, n) => String(v ?? "").slice(0, n);
+function userCookie(who) {
   const body = Buffer.from(
-    JSON.stringify({ id, exp: Date.now() + USER_COOKIE_MS }),
+    JSON.stringify({
+      id: String(who.id),
+      name: short(who.name, 20),
+      tag: /^[A-Za-z0-9]{2,5}$/.test(String(who.tag || "")) ? who.tag : "",
+      avatar: /^https:\/\/cdn\.discordapp\.com\//.test(String(who.avatar || ""))
+        ? short(who.avatar, 200)
+        : "",
+      exp: Date.now() + USER_COOKIE_MS,
+    }),
   ).toString("base64url");
   return `${USER_COOKIE}=${body}.${sign("u:" + body)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${USER_COOKIE_MS / 1000}`;
 }
@@ -159,6 +177,42 @@ const HOST_UI_COOKIE = "tsp_host_ui=1; Path=/; SameSite=Lax; Max-Age=31536000";
 
 // One open lobby or running game per ticket host: their last game id and its worker port.
 const lastGame = new Map();
+// Against abuse (Bembe 2026-11-15: every Discord login may host, guests only join): at most
+// MAX_DISCORD_LOBBIES open lobbies/games of Discord hosts at once (server resources), and at most
+// LOBBIES_PER_HOUR new lobbies per account and per IP in an hour. Key holders are not limited.
+const MAX_DISCORD_LOBBIES = Number(process.env.MAX_DISCORD_LOBBIES || 25);
+const LOBBIES_PER_HOUR = Number(process.env.LOBBIES_PER_HOUR || 12);
+const recentCreates = new Map(); // account id or "ip:<addr>" -> times of new lobbies in the last hour
+function tooManyCreates(keys) {
+  const cutoff = Date.now() - 3600 * 1000;
+  for (const k of keys) {
+    const list = (recentCreates.get(k) || []).filter((t) => t > cutoff);
+    recentCreates.set(k, list);
+    if (list.length >= LOBBIES_PER_HOUR) return true;
+  }
+  return false;
+}
+function noteCreate(keys) {
+  for (const k of keys) recentCreates.get(k)?.push(Date.now());
+  if (recentCreates.size > 5000)
+    for (const [k, v] of recentCreates) if (!v.length) recentCreates.delete(k);
+}
+async function openDiscordLobbies(exceptUid) {
+  let n = 0;
+  for (const [id, g] of lastGame) {
+    if (id === exceptUid) continue;
+    if (await gameExists(g)) n++;
+    else lastGame.delete(id);
+  }
+  return n;
+}
+const clientIp = (req) =>
+  String(
+    req.headers["cf-connecting-ip"] ||
+      String(req.headers["x-forwarded-for"] || "").split(",")[0] ||
+      req.socket.remoteAddress ||
+      "",
+  ).trim();
 function gameExists(g) {
   return new Promise((resolve) => {
     const r = http.get(
@@ -188,6 +242,149 @@ function gameExists(g) {
     r.on("error", () => resolve(false));
   });
 }
+
+// Signs finished games for the site (new key per start; the site fetches /api/tsp/pubkey).
+const resultKeys = crypto.generateKeyPairSync("ed25519");
+const RESULT_PUB = resultKeys.publicKey.export({ type: "spki", format: "pem" });
+const INTERNAL_KEY = process.env.API_KEY || "";
+const resultQueue = []; // games the site has not taken yet, retried with a growing wait
+let sending = false;
+async function sendResults() {
+  if (sending) return;
+  sending = true;
+  while (resultQueue.length) {
+    const item = resultQueue[0];
+    if (item.next > Date.now()) {
+      setTimeout(sendResults, item.next - Date.now());
+      break;
+    }
+    const body = Buffer.from(JSON.stringify(item.game)).toString("base64url");
+    const sig = crypto
+      .sign(null, Buffer.from(body), resultKeys.privateKey)
+      .toString("base64url");
+    let ok = false;
+    try {
+      const r = await fetch(`${PLAY_SITE}/api/play/game-result`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": GAME_UA },
+        body: JSON.stringify({ body, sig }),
+        signal: AbortSignal.timeout(10000),
+      });
+      // 4xx other than a bad signature will not get better with a retry
+      ok = r.ok || (r.status >= 400 && r.status < 500 && r.status !== 403);
+      console.log(
+        new Date().toISOString(),
+        "game result",
+        item.game.gameID,
+        "->",
+        r.status,
+      );
+    } catch (e) {
+      console.error("Cannot send game result:", e.message);
+    }
+    if (ok || ++item.tries >= 8) resultQueue.shift();
+    else item.next = Date.now() + Math.min(30 * 60000, 15000 * 2 ** item.tries);
+  }
+  sending = false;
+}
+// The Skin Gallery's public patterns (no private skin is ever listed by the site), kept 10 minutes.
+// SKIN_GALLERY_SITE (default PLAY_SITE) is where they come from; src/server/SiteLink.ts reads the same.
+const GALLERY_SITE = String(process.env.SKIN_GALLERY_SITE || PLAY_SITE)
+  .trim()
+  .replace(/\/+$/, "");
+let galleryCache = { at: 0, items: [] };
+async function gallerySkins() {
+  if (Date.now() - galleryCache.at < 10 * 60 * 1000) return galleryCache.items;
+  if (GALLERY_SITE === "off" || !GALLERY_SITE) return [];
+  try {
+    const r = await fetch(`${GALLERY_SITE}/api/skins`, {
+      headers: { "User-Agent": GAME_UA },
+      signal: AbortSignal.timeout(6000),
+    });
+    const d = r.ok ? await r.json() : { items: [] };
+    const items = (d.items || [])
+      .filter(
+        (s) =>
+          !s.private &&
+          typeof s.code === "string" &&
+          /^[A-Za-z0-9_-]{4,20}$/.test(String(s.id)),
+      )
+      .map((s) => ({
+        id: s.id,
+        pattern:
+          "tsp_" + Buffer.from(s.id, "base64url").toString("hex").slice(0, 28),
+        name: short(s.name || "Skin", 60),
+        code: s.code,
+        primary: /^#[0-9a-f]{6}$/i.test(s.primary) ? s.primary : "#ffffff",
+        secondary: /^#[0-9a-f]{6}$/i.test(s.secondary)
+          ? s.secondary
+          : "#000000",
+        owner: short(s.owner?.name || "", 40),
+        rating: Number(s.rating) || 0,
+      }))
+      .sort((a, b) => b.rating - a.rating);
+    galleryCache = { at: Date.now(), items };
+  } catch (e) {
+    console.error("Cannot load the skin gallery:", e.message);
+    galleryCache.at = Date.now() - 9 * 60 * 1000;
+  }
+  return galleryCache.items;
+}
+// A signed request to the site ({ body: base64url(JSON), sig }), checked there with /api/tsp/pubkey.
+async function siteCall(path, payload) {
+  const body = Buffer.from(
+    JSON.stringify({ ...payload, sentAt: Date.now() }),
+  ).toString("base64url");
+  const sig = crypto
+    .sign(null, Buffer.from(body), resultKeys.privateKey)
+    .toString("base64url");
+  try {
+    const r = await fetch(`${PLAY_SITE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": GAME_UA },
+      body: JSON.stringify({ body, sig }),
+      signal: AbortSignal.timeout(8000),
+    });
+    let j = null;
+    try {
+      j = await r.json();
+    } catch {}
+    return { status: r.status, body: j || { error: "site error" } };
+  } catch (e) {
+    return { status: 502, body: { error: "site unreachable: " + e.message } };
+  }
+}
+function readJson(req, max) {
+  return new Promise((resolve) => {
+    let b = "";
+    req.on("data", (c) => {
+      b += c;
+      if (b.length > max) req.destroy();
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(b));
+      } catch {
+        resolve(null);
+      }
+    });
+    req.on("error", () => resolve(null));
+  });
+}
+const isLoopback = (req) =>
+  ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(
+    String(req.socket.remoteAddress || ""),
+  );
+const sendJson = (res, code, v) => {
+  res.writeHead(code, {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+  });
+  res.end(JSON.stringify(v));
+};
+// Only an invite link of this game or the home page, so a login never bounces the player elsewhere.
+const safeNext = (n) =>
+  /^\/game\/[A-Za-z0-9]{4,16}$/.test(String(n || "")) ? n : "/";
 
 // Shown on "/" without the host key: players paste their invite link or code.
 const INVITE_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -248,14 +445,100 @@ const server = http.createServer(async (req, res) => {
     u.pathname === "/" &&
     u.searchParams.get("key") === ACCESS_KEY
   ) {
+    const who = u.searchParams.has("ticket")
+      ? await readTicket(u.searchParams.get("ticket"))
+      : null;
     res.writeHead(302, {
       "Set-Cookie": [
         `${COOKIE}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
         HOST_UI_COOKIE,
+        ...(who ? [userCookie(who)] : []),
       ],
+      Location: safeNext(u.searchParams.get("next")),
+    });
+    return res.end();
+  }
+  // Who this browser is on teamstats.pro (from the player cookie), for the name / tag fields.
+  if (u.pathname === "/api/tsp/me") {
+    const me = siteUser(req);
+    return sendJson(
+      res,
+      200,
+      me
+        ? {
+            loggedIn: true,
+            id: String(me.id),
+            name: me.name || "",
+            tag: me.tag || "",
+            avatar: me.avatar || "",
+            profile: `${PLAY_SITE}/play-profile.html?u=${encodeURIComponent(me.id)}`,
+          }
+        : { loggedIn: false, login: ticketsOn ? "/login" : null },
+    );
+  }
+  if (u.pathname === "/api/tsp/pubkey") {
+    res.writeHead(200, {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    return res.end(RESULT_PUB);
+  }
+  // Log in with teamstats.pro: the site's /play logs in with Discord and comes back with a ticket.
+  if (u.pathname === "/login" && ticketsOn) {
+    const next = safeNext(u.searchParams.get("next"));
+    res.writeHead(302, {
+      Location: `${PLAY_SITE}/play${next !== "/" ? "?next=" + encodeURIComponent(next) : ""}`,
+    });
+    return res.end();
+  }
+  if (u.pathname === "/logout") {
+    res.writeHead(302, {
+      "Set-Cookie": `${USER_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
       Location: "/",
     });
     return res.end();
+  }
+  // Public patterns of the teamstats.pro Skin Gallery for the picker in "Your Profile" (TspPattern.ts).
+  if (u.pathname === "/api/tsp/skins" && req.method === "GET") {
+    return sendJson(res, 200, { items: await gallerySkins() });
+  }
+  // Game settings of a logged-in player, kept on their teamstats.pro account (src/client/TspProfile.ts).
+  // The page talks to this front only; the front asks the site with a signed request naming the account
+  // from the signed cookie, so nobody can read or change another account's settings.
+  if (u.pathname === "/api/tsp/settings") {
+    const uid = userId(req);
+    if (!uid || !ticketsOn)
+      return sendJson(res, 401, { error: "not logged in" });
+    if (req.method !== "GET" && req.method !== "PUT")
+      return sendJson(res, 405, { error: "GET or PUT" });
+    const put = req.method === "PUT" ? await readJson(req, 220 * 1024) : null;
+    if (req.method === "PUT" && (!put || typeof put.settings !== "object"))
+      return sendJson(res, 400, { error: "bad settings" });
+    const r = await siteCall("/api/play/settings", {
+      op: put ? "put" : "get",
+      user: uid,
+      ...(put ? { settings: put.settings } : {}),
+    });
+    return sendJson(res, r.status, r.body);
+  }
+  // A finished game from a worker (GameServer.archiveGame -> Archive.ts), passed on to the site.
+  if (u.pathname === "/internal/game-result" && req.method === "POST") {
+    if (
+      !isLoopback(req) ||
+      req.headers["x-forwarded-for"] ||
+      !INTERNAL_KEY ||
+      req.headers["x-tsp-internal"] !== INTERNAL_KEY
+    )
+      return sendJson(res, 403, { error: "forbidden" });
+    const game = await readJson(req, 300000);
+    if (!game || !game.gameID) return sendJson(res, 400, { error: "bad game" });
+    if (ticketsOn && (game.players || []).some((p) => p.siteUser)) {
+      game.sentAt = Date.now();
+      resultQueue.push({ game, tries: 0, next: 0 });
+      if (resultQueue.length > 500) resultQueue.shift();
+      sendResults();
+    }
+    return sendJson(res, 200, { ok: true });
   }
   // "Host a lobby" on the home page for browsers that are not hosts yet
   if (u.pathname === "/host") {
@@ -288,8 +571,8 @@ const server = http.createServer(async (req, res) => {
       302,
       who
         ? {
-            "Set-Cookie": [userCookie(String(who.id)), HOST_UI_COOKIE],
-            Location: "/",
+            "Set-Cookie": [userCookie(who), HOST_UI_COOKIE],
+            Location: safeNext(u.searchParams.get("next")),
           }
         : { Location: "/" },
     );
@@ -336,21 +619,59 @@ const server = http.createServer(async (req, res) => {
       }),
     );
   }
+  const limitKeys = [uid, "ip:" + clientIp(req)];
+  if (!u.searchParams.has("previous") && tooManyCreates(limitKeys)) {
+    res.writeHead(429, { "Content-Type": "application/json" });
+    return res.end(
+      JSON.stringify({
+        error: `You made ${LOBBIES_PER_HOUR} lobbies in the last hour. Try again a bit later.`,
+      }),
+    );
+  }
+  if (lastGame.size >= MAX_DISCORD_LOBBIES) {
+    if ((await openDiscordLobbies(uid)) >= MAX_DISCORD_LOBBIES) {
+      console.log(
+        new Date().toISOString(),
+        "create_game refused: server full",
+        uid,
+      );
+      res.writeHead(503, { "Content-Type": "application/json" });
+      return res.end(
+        JSON.stringify({
+          error:
+            "All lobby slots are in use right now. Join a friend's lobby or try again in a few minutes.",
+        }),
+      );
+    }
+  }
   proxy(req, res, t, (status, body) => {
     if (status !== 200) return;
     try {
       const g = JSON.parse(body.toString());
-      if (g.gameID) lastGame.set(uid, { id: g.gameID, port: t.port });
+      if (g.gameID) {
+        lastGame.set(uid, { id: g.gameID, port: t.port });
+        noteCreate(limitKeys);
+      }
     } catch {}
   });
 });
 
 server.on("upgrade", (req, socket, head) => {
   const t = route(req.url);
+  // The site account of this socket for the worker; the header is never taken from the browser.
+  const who = siteUser(req);
+  const uid = String(who?.id || "");
   const up = net.connect(t.port, "127.0.0.1", () => {
     let raw = `${req.method} ${t.path} HTTP/1.1\r\n`;
     for (let i = 0; i < req.rawHeaders.length; i += 2)
-      raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
+      if (!/^x-tsp-(user|name)$/i.test(req.rawHeaders[i]))
+        raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
+    if (/^\d{5,25}$/.test(uid)) {
+      raw += `x-tsp-user: ${uid}\r\n`;
+      // the account's name, for the verified badge (SiteLink.siteVerified)
+      if (who.name)
+        raw += `x-tsp-name: ${Buffer.from(String(who.name)).toString("base64url")}\r\n`;
+    }
     up.write(raw + "\r\n");
     if (head && head.length) up.write(head);
     up.pipe(socket);

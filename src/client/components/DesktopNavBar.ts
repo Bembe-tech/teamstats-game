@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import "../TspProfile";
 import "./NavAccountMenu";
 import { NavNotificationsController } from "./NavNotificationsController";
 import "./NavUtilityIcons";
@@ -119,6 +120,7 @@ export class DesktopNavBar extends LitElement {
         <div class="flex items-center gap-1 pl-5 ml-1 border-l border-white/10">
           <nav-utility-icons size="desktop"></nav-utility-icons>
           <nav-account-menu variant="desktop"></nav-account-menu>
+          <tsp-profile-button size="desktop"></tsp-profile-button>
         </div>
       </nav>
     `;

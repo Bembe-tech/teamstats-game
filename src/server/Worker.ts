@@ -45,6 +45,12 @@ import { startRankedCheckinLoops } from "./RankedCheckin";
 import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
+import {
+  galleryPattern,
+  rememberSiteUser,
+  siteUserHeader,
+  siteVerified,
+} from "./SiteLink";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
@@ -788,6 +794,15 @@ export async function startWorker() {
           return;
         }
 
+        // TeamStats.Pro: a territory pattern from the teamstats.pro Skin Gallery (free for everyone;
+        // an unknown or private one is just dropped).
+        if (!ServerEnv.openFrontApi()) {
+          const tspPattern = await galleryPattern(
+            clientMsg.cosmetics?.patternName,
+          );
+          if (tspPattern) cosmeticResult.cosmetics.pattern = tspPattern;
+        }
+
         // Verified intent, not a claim to verify: the check stays only when
         // the account renders bare and the screened join name is that bare
         // name. The name itself is never replaced, so everything shown in the
@@ -799,7 +814,19 @@ export async function startWorker() {
           username,
           accountUsername ?? null,
         );
-        if (
+        // TeamStats.Pro: the check means "logged in with teamstats.pro and playing under that
+        // account's name" (Bembe 2026-11-15), set by the server alone; what the client asks for is ignored.
+        if (!ServerEnv.openFrontApi()) {
+          if (
+            siteVerified(
+              req.headers["x-tsp-user"],
+              req.headers["x-tsp-name"],
+              username,
+            )
+          )
+            cosmeticResult.cosmetics.verified = true;
+          else delete cosmeticResult.cosmetics.verified;
+        } else if (
           verifiedOutcome === "custom" &&
           clientMsg.cosmetics?.verified === true
         ) {
@@ -829,6 +856,12 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+        );
+
+        // TeamStats.Pro: the teamstats.pro account of this socket (set by teamstats/front.cjs)
+        rememberSiteUser(
+          client.clientID,
+          siteUserHeader(req.headers["x-tsp-user"]),
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

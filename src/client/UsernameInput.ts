@@ -666,6 +666,9 @@ export class UsernameInput extends LitElement {
     // reloads the whole page — falls back to a fresh guest username instead of
     // keeping the account name. addAuthListener only fires on login; CrazyGames
     // refreshes the page on logout, so there is no logout event to handle.
+    // TeamStats.Pro: a player logged in with teamstats.pro plays under the site account's name and clan
+    // tag (teamstats/front.cjs /api/tsp/me, from the /play ticket) instead of what localStorage holds.
+    if (!this.onCrazyGames && !this.onSteam) void this.applySiteIdentity();
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
         this.baseUsername = clampUsername(username);
@@ -1215,6 +1218,30 @@ export class UsernameInput extends LitElement {
     // Typed by the player, so no longer ours to reseed over.
     this.usernameIsGenerated = false;
     this.validateAndStore();
+  }
+
+  private async applySiteIdentity() {
+    try {
+      const r = await fetch("/api/tsp/me", { credentials: "same-origin" });
+      if (!r.ok) return;
+      const me = (await r.json()) as {
+        loggedIn?: boolean;
+        name?: string;
+        tag?: string;
+      };
+      if (!me.loggedIn) return;
+      const name = clampUsername(String(me.name ?? "").trim());
+      if (name && validateUsername(name).isValid) {
+        this.baseUsername = name;
+        this.usernameIsGenerated = false;
+      }
+      const tag = String(me.tag ?? "");
+      if (tag && validateClanTag(tag).isValid) this.clanTag = tag;
+      this.validateAndStore();
+      if (this.clanTag) this.startClanCheck();
+    } catch {
+      // not behind teamstats/front.cjs (plain dev server): keep the stored name
+    }
   }
 
   private validateAndStore() {

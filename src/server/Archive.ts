@@ -10,11 +10,16 @@ import { replacer } from "../core/Util";
 import { registeredSite } from "./ClusterCheckin";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
+import { sendToSite } from "./SiteLink";
 
 const log = logger.child({ component: "Archive" });
 
 export async function archive(gameRecord: GameRecord) {
-  if (!ServerEnv.openFrontApi()) return; // StreamLobby: no game archive
+  if (!ServerEnv.openFrontApi()) {
+    // StreamLobby: no game archive; TeamStats.Pro keeps a short summary on the players' site profiles
+    await sendToSite(gameRecord);
+    return;
+  }
   try {
     const parsed = GameRecordSchema.safeParse(gameRecord);
     if (!parsed.success) {

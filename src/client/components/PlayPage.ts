@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import "../TspProfile";
 import "./CosmeticBackground";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
@@ -73,6 +74,7 @@ export class PlayPage extends LitElement {
             >
               <nav-utility-icons size="mobile"></nav-utility-icons>
               <nav-account-menu variant="mobile"></nav-account-menu>
+              <tsp-profile-button size="mobile"></tsp-profile-button>
             </div>
           </div>
         </div>
