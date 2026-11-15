@@ -12,6 +12,7 @@ export interface TspGallerySkin {
   secondary: string;
   owner: string;
   rating: number;
+  created?: string;
 }
 
 export function tspPatternChoice(): string | null {

@@ -321,6 +321,7 @@ async function gallerySkins() {
           : "#000000",
         owner: short(s.owner?.name || "", 40),
         rating: Number(s.rating) || 0,
+        created: short(s.createdAt || "", 30),
       }))
       .sort((a, b) => b.rating - a.rating);
     galleryCache = { at: Date.now(), items };
@@ -472,8 +473,13 @@ const server = http.createServer(async (req, res) => {
             tag: me.tag || "",
             avatar: me.avatar || "",
             profile: `${PLAY_SITE}/play-profile.html?u=${encodeURIComponent(me.id)}`,
+            site: GALLERY_SITE,
           }
-        : { loggedIn: false, login: ticketsOn ? "/login" : null },
+        : {
+            loggedIn: false,
+            login: ticketsOn ? "/login" : null,
+            site: GALLERY_SITE,
+          },
     );
   }
   if (u.pathname === "/api/tsp/pubkey") {

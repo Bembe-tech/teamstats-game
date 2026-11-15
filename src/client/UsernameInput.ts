@@ -46,6 +46,8 @@ interface LangSelectorLike {
 
 const usernameKey: string = "username";
 const clanTagKey: string = "clanTag";
+// TeamStats.Pro: the tag the player typed, synced with the settings (see applySiteIdentity)
+const TSP_CLAN_TAG_KEY = "settings.tspClanTag";
 const useVerifiedNameKey: string = "useVerifiedName";
 // "The stored username is one we generated, not one the player chose." Written
 // alongside the name itself; see usernameIsGenerated.
@@ -860,62 +862,32 @@ export class UsernameInput extends LitElement {
     </div>`;
   }
 
-  // Members pick from their own clans rather than guessing a tag and waiting
-  // to be rejected; the free-text field covers everyone else.
+  // TeamStats.Pro (Bembe 2026-11-15): no clans on accounts here, so the tag is just typed in
+  // (no "your clans" list, no "Browse clans"). Same checks as before: length, characters, and the
+  // game server's own check at join.
   private renderClanControl() {
-    const tag = this.clanTag;
-    const invalid = this.clanTagOwnershipError !== "";
+    const invalid =
+      this.clanTagOwnershipError !== "" ||
+      (this.clanTag !== "" && !validateClanTag(this.clanTag).isValid);
     return html`
-      <!-- Escape is bound here, not on the menu: the trigger keeps focus and
-           is the menu's sibling, so a menu-level handler never sees it. -->
-      <div
-        class="no-crazygames relative shrink-0 h-full max-h-[44px]"
-        @keydown=${this.handleClanMenuKeydown}
-      >
-        <button
-          type="button"
-          id="clan-tag-button"
-          class="flex h-full w-[7.25rem] items-center justify-between gap-0.5 rounded-lg bg-transparent px-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
-            ? "ring-2 ring-red-400/70"
-            : this.clanMenuOpen
-              ? "bg-white/10"
-              : "hover:bg-white/5"}"
-          aria-haspopup="dialog"
-          aria-expanded=${this.clanMenuOpen ? "true" : "false"}
-          aria-busy=${this.clanCheckPending ? "true" : "false"}
+      <div class="no-crazygames relative shrink-0 h-full max-h-[44px]">
+        <input
+          id="clan-tag-input"
+          type="text"
+          .value=${this.clanTag}
+          @input=${this.handleClanTagChange}
+          placeholder=${translateText("username.tag")}
+          minlength="${MIN_CLAN_TAG_LENGTH}"
+          maxlength="${MAX_CLAN_TAG_LENGTH}"
+          autocomplete="off"
+          spellcheck="false"
           aria-invalid=${invalid ? "true" : "false"}
           aria-label=${translateText("username.clan_label")}
-          title=${translateText("username.clan_label")}
-          @click=${this.toggleClanMenu}
-        >
-          <span
-            class="min-w-0 flex-1 truncate text-base font-semibold uppercase text-left ${tag
-              ? "text-white"
-              : "text-white/45"}"
-            >${tag || translateText("username.tag")}</span
-          >
-          ${this.clanCheckPending
-            ? html`<span
-                class="w-3 h-3 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
-                aria-hidden="true"
-              ></span>`
-            : html`<svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-3 h-3 shrink-0 text-white/45"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5.5 7.5 10 12l4.5-4.5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-              </svg>`}
-        </button>
-        ${this.clanMenuOpen ? this.renderClanMenu() : null}
+          title="Clan tag (2-5 letters or digits), optional"
+          class="h-full w-[5.5rem] rounded-lg bg-transparent px-2 text-base font-semibold uppercase tracking-wider text-white placeholder-white/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 hover:bg-white/5 ${invalid
+            ? "ring-2 ring-red-400/70"
+            : ""}"
+        />
       </div>
     `;
   }
@@ -1193,6 +1165,9 @@ export class UsernameInput extends LitElement {
     }
     this.clanTag = val;
     this.clanDraft = val;
+    // a tag the player typed: kept with the settings (TspProfile.ts syncs "settings.*"), so it
+    // wins over the account's tag next time (applySiteIdentity)
+    if (!this.onCrazyGames) localStorage.setItem(TSP_CLAN_TAG_KEY, val);
     this.validateAndStore();
     this.startClanCheck();
   }
@@ -1235,8 +1210,9 @@ export class UsernameInput extends LitElement {
         this.baseUsername = name;
         this.usernameIsGenerated = false;
       }
-      const tag = String(me.tag ?? "");
-      if (tag && validateClanTag(tag).isValid) this.clanTag = tag;
+      // No clan is tied to an account (Bembe 2026-11-15): only a tag the player typed comes back.
+      const tag = localStorage.getItem(TSP_CLAN_TAG_KEY) ?? "";
+      if (tag === "" || validateClanTag(tag).isValid) this.clanTag = tag;
       this.validateAndStore();
       if (this.clanTag) this.startClanCheck();
     } catch {

@@ -5,7 +5,7 @@
 // /api/tsp/settings, signed on to the site) and brought into any browser where you log in. Not logged in,
 // the settings stay in this browser only (localStorage, as before). On the first login with no settings on
 // the account yet, the panel asks whether to move this browser's settings to the account.
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, render } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import {
@@ -23,6 +23,7 @@ export interface TspMe {
   tag?: string;
   avatar?: string;
   profile?: string;
+  site?: string;
   login?: string | null;
 }
 
@@ -201,6 +202,9 @@ export class TspProfileButton extends LitElement {
     return this;
   }
   private onSync = () => this.requestUpdate();
+  // The windows live in a box on <body>: the nav bar has a backdrop blur, which would trap
+  // position:fixed inside the bar.
+  private portal: HTMLDivElement | null = null;
   connectedCallback() {
     super.connectedCallback();
     listeners.add(this.onSync);
@@ -210,92 +214,298 @@ export class TspProfileButton extends LitElement {
     });
   }
   disconnectedCallback() {
+    this.portal?.remove();
+    this.portal = null;
     listeners.delete(this.onSync);
     super.disconnectedCallback();
   }
   @state() private skins: TspGallerySkin[] | null = null;
   @state() private skinQuery = "";
+  @state() private skinSort: "top" | "new" | "name" = "top";
   @state() private pickedPattern: string | null = tspPatternChoice();
+  @state() private skinModal = false;
+  @state() private preview: TspGallerySkin | null = null;
 
+  private loadSkins() {
+    if (this.skins === null)
+      void tspGallerySkins().then((s) => (this.skins = s));
+  }
+  private currentSkin(): TspGallerySkin | null {
+    return this.skins?.find((s) => s.pattern === this.pickedPattern) ?? null;
+  }
   private pickPattern(p: string | null) {
     setTspPatternChoice(p);
     this.pickedPattern = p;
   }
+  private patternCanvas(s: TspGallerySkin, w: number, h: number) {
+    return html`<canvas
+      width=${w}
+      height=${h}
+      style="display:block;width:100%;height:auto;border-radius:8px;image-rendering:pixelated;background:#0b1018"
+      data-code=${s.code}
+      data-p=${s.primary}
+      data-s=${s.secondary}
+    ></canvas>`;
+  }
+
+  // In the profile panel: what you wear now and a button that opens the gallery window.
   private skinsSection() {
-    if (this.skins === null) {
-      void tspGallerySkins().then((s) => (this.skins = s));
-      return html`<div style=${S.muted}>Loading the Skin Gallery…</div>`;
-    }
+    this.loadSkins();
+    const cur = this.currentSkin();
+    return html`<div
+      style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;border:1px solid #232c3c;background:#0b1018"
+    >
+      <div style="width:96px;flex:none">
+        ${cur
+          ? this.patternCanvas(cur, 96, 60)
+          : html`<div
+              style="height:60px;border-radius:8px;background:#1a2230;display:grid;place-items:center;color:#8f9bab;font-size:11px"
+            >
+              Plain colour
+            </div>`}
+      </div>
+      <div style="flex:1;min-width:0">
+        <b>${cur ? cur.name : this.pickedPattern ? "Skin" : "No skin"}</b>
+        <div style=${S.muted}>
+          ${cur?.owner ? "by " + cur.owner + " · " : ""}Free for everyone
+        </div>
+      </div>
+      <button
+        style=${S.main}
+        @click=${() => {
+          this.preview = cur;
+          this.skinModal = true;
+        }}
+      >
+        Choose skin
+      </button>
+    </div>`;
+  }
+
+  // The gallery window: big grid, search, sort, preview and "Use this skin".
+  private skinWindow() {
+    const site = this.me?.site ?? "https://teamstats.pro";
     const q = this.skinQuery.trim().toLowerCase();
-    const list = this.skins
+    const all = this.skins ?? [];
+    const list = all
       .filter(
         (s) =>
           !q ||
           s.name.toLowerCase().includes(q) ||
           s.owner.toLowerCase().includes(q),
       )
-      .slice(0, 60);
-    const tile = (s: TspGallerySkin | null) => {
-      const on = (s?.pattern ?? null) === this.pickedPattern;
-      return html`<button
-        title=${s
-          ? `${s.name}${s.owner ? " by " + s.owner : ""}`
-          : "No pattern"}
-        @click=${() => this.pickPattern(s?.pattern ?? null)}
-        style="padding:4px;border-radius:10px;cursor:pointer;background:#0b1018;border:2px solid ${on
+      .slice()
+      .sort((a, b) =>
+        this.skinSort === "name"
+          ? a.name.localeCompare(b.name)
+          : this.skinSort === "new"
+            ? (b.created ?? "").localeCompare(a.created ?? "")
+            : b.rating - a.rating,
+      );
+    const p = this.preview;
+    const worn = (s: TspGallerySkin | null) =>
+      (s?.pattern ?? null) === this.pickedPattern;
+    const card = (s: TspGallerySkin) =>
+      html`<button
+        @click=${() => (this.preview = s)}
+        @dblclick=${() => this.pickPattern(s.pattern)}
+        title=${s.name + (s.owner ? " by " + s.owner : "")}
+        style="text-align:left;padding:8px;border-radius:14px;cursor:pointer;background:#0d1320;border:2px solid ${p?.pattern ===
+        s.pattern
           ? "#57e6ff"
-          : "#232c3c"};display:flex;flex-direction:column;align-items:center;gap:4px;width:84px"
+          : worn(s)
+            ? "#3d7dff"
+            : "#1f2938"};color:#edf2f7;display:flex;flex-direction:column;gap:6px;min-width:0"
       >
-        ${s
-          ? html`<canvas
-              width="72"
-              height="48"
-              style="border-radius:6px;image-rendering:pixelated"
-              data-code=${s.code}
-              data-p=${s.primary}
-              data-s=${s.secondary}
-            ></canvas>`
-          : html`<div
-              style="width:72px;height:48px;border-radius:6px;background:#1a2230;display:grid;place-items:center;color:#8f9bab;font-size:11px"
-            >
-              None
-            </div>`}
+        ${this.patternCanvas(s, 160, 100)}
         <span
-          style="font-size:10.5px;color:#cbd5e1;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-          >${s ? s.name : "Plain colour"}</span
+          style="font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          >${s.name}</span
         >
+        <span
+          style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:#8f9bab"
+        >
+          <span
+            style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            >${s.owner ? "by " + s.owner : ""}</span
+          >
+          <span style="flex:none"
+            >${worn(s)
+              ? html`<b style="color:#6ea8ff">WORN</b>`
+              : s.rating
+                ? "★ " + s.rating.toFixed(1)
+                : ""}</span
+          >
+        </span>
       </button>`;
-    };
-    return html`<input
-        placeholder="Search skins or creators"
-        .value=${this.skinQuery}
-        @input=${(e: Event) =>
-          (this.skinQuery = (e.target as HTMLInputElement).value)}
-        style="width:100%;box-sizing:border-box;padding:9px 10px;border-radius:10px;border:1px solid #232c3c;background:#05060a;color:#edf2f7"
-      />
+    const close = () => (this.skinModal = false);
+    return html`<div
+      style=${S.overlay + ";z-index:10001"}
+      @click=${(e: Event) => e.target === e.currentTarget && close()}
+    >
       <div
-        style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:260px;overflow:auto"
+        style=${S.card +
+        ";width:min(1040px,100%);max-height:92vh;display:flex;flex-direction:column;padding:0;overflow-y:auto"}
+        role="dialog"
+        aria-label="Skin Gallery"
       >
-        ${tile(null)} ${list.map((s) => tile(s))}
+        <div
+          style="display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid #1f2938;flex-wrap:wrap"
+        >
+          <div style="flex:1;min-width:200px">
+            <div
+              style="font:900 22px Orbitron,Inter,system-ui,sans-serif;letter-spacing:.04em"
+            >
+              SKIN <span style="color:#57e6ff">GALLERY</span>
+            </div>
+            <div style=${S.muted}>
+              All skins are <b style="color:#5ee39a">free</b>. Pick one and
+              everyone in your games sees it on your territory.
+            </div>
+          </div>
+          <a
+            href=${site + "/skin-creator.html"}
+            target="_blank"
+            rel="noopener"
+            style=${S.main}
+            >＋ Create your own skin</a
+          >
+          <button style=${S.btn} @click=${close} aria-label="Close">✕</button>
+        </div>
+        <div
+          style="display:flex;gap:8px;padding:12px 20px;border-bottom:1px solid #1f2938;flex-wrap:wrap"
+        >
+          <input
+            placeholder="Search skins or creators"
+            .value=${this.skinQuery}
+            @input=${(e: Event) =>
+              (this.skinQuery = (e.target as HTMLInputElement).value)}
+            style="flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid #232c3c;background:#05060a;color:#edf2f7"
+          />
+          ${(["top", "new", "name"] as const).map(
+            (k) =>
+              html`<button
+                style=${S.btn +
+                (this.skinSort === k
+                  ? ";border-color:#57e6ff;color:#57e6ff"
+                  : "")}
+                @click=${() => (this.skinSort = k)}
+              >
+                ${k === "top" ? "Top rated" : k === "new" ? "Newest" : "A–Z"}
+              </button>`,
+          )}
+        </div>
+        <div style="display:flex;flex:1;min-height:0;flex-wrap:wrap">
+          <div
+            style="flex:1 1 520px;min-width:0;overflow:auto;padding:16px 20px;max-height:62vh"
+          >
+            ${this.skins === null
+              ? html`<div style=${S.muted}>Loading the Skin Gallery…</div>`
+              : list.length
+                ? html`<div
+                    style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(140px,40vw),1fr));gap:10px"
+                  >
+                    ${list.map(card)}
+                  </div>`
+                : html`<div style=${S.muted}>
+                    ${all.length
+                      ? "No skin matches that search."
+                      : "The Skin Gallery has no public skins yet."}
+                  </div>`}
+          </div>
+          <div
+            style="flex:0 1 280px;min-width:240px;padding:16px 20px;border-left:1px solid #1f2938;background:rgba(5,8,14,.5)"
+          >
+            ${p
+              ? html`${this.patternCanvas(p, 256, 160)}
+                  <div style="font-weight:900;font-size:17px;margin-top:10px">
+                    ${p.name}
+                  </div>
+                  <div style=${S.muted}>
+                    ${p.owner ? "by " + p.owner : ""}${p.rating
+                      ? " · ★ " + p.rating.toFixed(1)
+                      : ""}
+                  </div>
+                  <div style="display:flex;gap:6px;margin:10px 0">
+                    <span
+                      title="Territory colour"
+                      style="width:22px;height:22px;border-radius:6px;border:1px solid #fff3;background:${p.primary}"
+                    ></span>
+                    <span
+                      title="Pattern colour"
+                      style="width:22px;height:22px;border-radius:6px;border:1px solid #fff3;background:${p.secondary}"
+                    ></span>
+                  </div>
+                  ${worn(p)
+                    ? html`<button style=${S.btn + ";width:100%"} disabled>
+                        ✓ You wear this skin
+                      </button>`
+                    : html`<button
+                        style=${S.main + ";width:100%"}
+                        @click=${() => this.pickPattern(p.pattern)}
+                      >
+                        Use this skin
+                      </button>`}
+                  <a
+                    href=${site + "/skin-gallery.html"}
+                    target="_blank"
+                    rel="noopener"
+                    style="display:block;margin-top:8px;color:#6ea8ff;font-size:12.5px"
+                    >Rate and comment in the gallery on teamstats.pro ↗</a
+                  >`
+              : html`<div style=${S.muted}>
+                  Click a skin to see it here. Double-click to wear it at once.
+                </div>`}
+            ${this.pickedPattern
+              ? html`<button
+                  style=${S.btn + ";width:100%;margin-top:14px"}
+                  @click=${() => this.pickPattern(null)}
+                >
+                  Remove skin (plain colour)
+                </button>`
+              : nothing}
+            <div
+              style="margin-top:16px;padding:12px;border-radius:12px;border:1px solid rgba(94,227,154,.3);background:rgba(94,227,154,.06);font-size:12.5px;line-height:1.5;color:#cbd5e1"
+            >
+              <b style="color:#5ee39a">Free, always.</b> Skins cost nothing and
+              unlock nothing. Make your own in the
+              <a
+                href=${site + "/skin-creator.html"}
+                target="_blank"
+                rel="noopener"
+                style="color:#6ea8ff"
+                >Skin Creator</a
+              >, share it in the gallery and anyone can play with it. Your pick
+              applies from your next
+              game${this.me?.loggedIn
+                ? " and is saved on your account."
+                : " and is saved in this browser."}
+            </div>
+          </div>
+        </div>
       </div>
-      <div style=${S.muted + ";margin-top:6px"}>
-        ${this.skins.length
-          ? "From the public Skin Gallery on teamstats.pro. Everyone in the game sees your pattern. It applies from your next game."
-          : "The Skin Gallery has no public skins yet."}
-      </div>`;
+    </div>`;
   }
 
   updated() {
-    for (const c of this.querySelectorAll<HTMLCanvasElement>(
-      "canvas[data-code]:not([data-drawn])",
+    this.portal ??= document.body.appendChild(document.createElement("div"));
+    render(
+      html`${this.open ? this.panel() : nothing}
+      ${this.skinModal ? this.skinWindow() : nothing}`,
+      this.portal,
+      { host: this },
+    );
+    for (const c of this.portal.querySelectorAll<HTMLCanvasElement>(
+      "canvas[data-code]",
     )) {
+      if (c.dataset.drawn === c.dataset.code) continue;
       drawPattern(
         c,
         c.dataset.code ?? "",
         c.dataset.p ?? "#fff",
         c.dataset.s ?? "#000",
       );
-      c.dataset.drawn = "1";
+      c.dataset.drawn = c.dataset.code ?? "";
     }
     // first login with browser settings: open the panel once to ask
     if (
@@ -475,36 +685,35 @@ export class TspProfileButton extends LitElement {
     const me = this.me;
     const small = this.size === "mobile";
     return html`<button
-        class="flex items-center gap-2 rounded-full cursor-pointer text-white/80 hover:text-malibu-blue transition-colors ${small
-          ? "px-2 h-9"
-          : "px-3 h-10"}"
-        style="border:1px solid rgba(110,168,255,.25);background:rgba(16,23,33,.7)"
-        @click=${() => (this.open = true)}
-        title="Your Profile"
-      >
-        ${me?.loggedIn && me.avatar
-          ? html`<img
-              src=${me.avatar}
-              alt=""
-              style="width:22px;height:22px;border-radius:50%"
-            />`
-          : html`<svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"
-              />
-            </svg>`}
-        ${small
-          ? nothing
-          : html`<span class="text-xs font-bold uppercase tracking-wider"
-              >${me?.loggedIn ? "Your Profile" : "Log in"}</span
-            >`}
-      </button>
-      ${this.open ? this.panel() : nothing}`;
+      class="flex items-center gap-2 rounded-full cursor-pointer text-white/80 hover:text-malibu-blue transition-colors ${small
+        ? "px-2 h-9"
+        : "px-3 h-10"}"
+      style="border:1px solid rgba(110,168,255,.25);background:rgba(16,23,33,.7)"
+      @click=${() => (this.open = true)}
+      title="Your Profile"
+    >
+      ${me?.loggedIn && me.avatar
+        ? html`<img
+            src=${me.avatar}
+            alt=""
+            style="width:22px;height:22px;border-radius:50%"
+          />`
+        : html`<svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"
+            />
+          </svg>`}
+      ${small
+        ? nothing
+        : html`<span class="text-xs font-bold uppercase tracking-wider"
+            >${me?.loggedIn ? "Your Profile" : "Log in"}</span
+          >`}
+    </button> `;
   }
 }
