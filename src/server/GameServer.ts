@@ -35,6 +35,7 @@ import {
   LobbyAccent,
   PartialGameRecord,
   PlayerLiveStats,
+  PlayerPattern,
   PlayerRecord,
   PlayerReport,
   PublicGameType,
@@ -698,6 +699,8 @@ export class GameServer {
     persistentID: string,
     lastTurn: number = 0,
     identityUpdate?: { username: string; clanTag: string | null },
+    // TeamStats.Pro: the gallery pattern picked in the lobby (null = none); undefined = unchanged
+    tspPattern?: PlayerPattern | null,
   ): boolean {
     // As in joinClient: an ended game may still be in GameManager until its
     // next tick, and the roster still holds the reconnect mapping.
@@ -715,14 +718,22 @@ export class GameServer {
       // switched to a custom name, so the check is dropped. The server only
       // resolves the check from the account at first join
       // (resolveVerifiedJoin); this rejoin path never re-derives it.
+      // TeamStats.Pro: the check means "logged in with teamstats.pro" and stays with any name.
       if (
+        ServerEnv.openFrontApi() &&
         identityUpdate.username !== client.username &&
         client.cosmetics?.verified
       ) {
         delete client.cosmetics.verified;
       }
+
       client.username = identityUpdate.username;
       client.clanTag = identityUpdate.clanTag;
+    }
+    if (tspPattern !== undefined && client.cosmetics && !this.hasStarted()) {
+      if (tspPattern) client.cosmetics.pattern = tspPattern;
+      else if (client.cosmetics.pattern?.name.startsWith("tsp_"))
+        delete client.cosmetics.pattern;
     }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);

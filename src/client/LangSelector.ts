@@ -16,6 +16,11 @@ type LanguageMetadata = {
   svg: string;
 };
 
+// TeamStats.Pro (Bembe 2026-11-16): English only for now, the other translations are not complete for our
+// own screens. The translation files stay; set this to false to bring the language picker back
+// (and remove the "lang-selector" rule in index.html's TeamStats.Pro style block).
+const ENGLISH_ONLY = true;
+
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
@@ -126,7 +131,9 @@ export class LangSelector extends LitElement {
     // changes their Steam language sees the game follow.
     const browserLocale = this.defaultLocale();
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
+    const userLang = ENGLISH_ONLY
+      ? "en"
+      : this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     const [defaultTranslations, translations] = await Promise.all([
       this.loadLanguage("en"),
@@ -236,6 +243,7 @@ export class LangSelector extends LitElement {
   }
 
   private async changeLanguage(lang: string) {
+    if (ENGLISH_ONLY && lang !== "en") return;
     localStorage.setItem("lang", lang);
     this.translations = await this.loadLanguage(lang);
     this.currentLang = lang;

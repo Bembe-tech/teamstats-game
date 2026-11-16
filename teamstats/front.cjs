@@ -243,6 +243,78 @@ function gameExists(g) {
   });
 }
 
+// Public lobbies (Bembe 2026-11-16): a host logged in with Discord (or with the key) flips "Public game"
+// in the lobby (HostLobbyModal.ts) and the lobby shows on the home page (TspPublicLobbies.ts) until it
+// starts or closes. One public lobby per account; MAX_PUBLIC_LOBBIES in all.
+const MAX_PUBLIC_LOBBIES = Number(process.env.MAX_PUBLIC_LOBBIES || 30);
+const publicLobbies = new Map(); // gameID -> { gameID, port, owner, host, avatar, at }
+function getJsonLocal(port, path) {
+  return new Promise((resolve) => {
+    const r = http.get(
+      { host: "127.0.0.1", port, path, timeout: 1500 },
+      (res) => {
+        let b = "";
+        res.on("data", (c) => {
+          if (b.length < 200000) b += c;
+        });
+        res.on("end", () => {
+          try {
+            resolve(res.statusCode === 200 ? JSON.parse(b) : null);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    );
+    r.on("timeout", () => r.destroy());
+    r.on("error", () => resolve(null));
+  });
+}
+async function findGamePort(gameID) {
+  for (let i = 0; i < NUM_WORKERS; i++) {
+    const e = await getJsonLocal(WORKER_BASE + i, `/api/game/${gameID}/exists`);
+    if (e && e.exists) return WORKER_BASE + i;
+  }
+  return 0;
+}
+let publicCache = { at: 0, list: [] };
+async function publicLobbyList() {
+  if (Date.now() - publicCache.at < 4000) return publicCache.list;
+  const list = [];
+  for (const [id, l] of publicLobbies) {
+    const e = await getJsonLocal(l.port, `/api/game/${id}/exists`);
+    // gone, finished, started or left by its host: off the list
+    if (
+      !e ||
+      !e.exists ||
+      e.open === false ||
+      e.started ||
+      Date.now() - l.at > 3 * 3600 * 1000
+    ) {
+      publicLobbies.delete(id);
+      continue;
+    }
+    const info = await getJsonLocal(l.port, `/api/game/${id}`);
+    if (!info) continue;
+    const cfg = info.gameConfig || {};
+    const players = (info.clients || []).filter((c) => !c.spectator).length;
+    list.push({
+      gameID: id,
+      host: l.host,
+      avatar: l.avatar,
+      map: String(cfg.gameMap || ""),
+      mode: String(cfg.gameMode || ""),
+      teams: cfg.playerTeams == null ? null : String(cfg.playerTeams),
+      fog: cfg.fogOfWar === true,
+      players,
+      maxPlayers: Number(cfg.maxPlayers) || null,
+      since: l.at,
+    });
+  }
+  publicCache = { at: Date.now(), list };
+  return list;
+}
+
 // Signs finished games for the site (new key per start; the site fetches /api/tsp/pubkey).
 const resultKeys = crypto.generateKeyPairSync("ed25519");
 const RESULT_PUB = resultKeys.publicKey.export({ type: "spki", format: "pem" });
@@ -508,6 +580,61 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === "/api/tsp/skins" && req.method === "GET") {
     return sendJson(res, 200, { items: await gallerySkins() });
   }
+  // The home page's list of public lobbies (polled every few seconds by TspPublicLobbies.ts).
+  if (u.pathname === "/api/tsp/public-lobbies" && req.method === "GET") {
+    return sendJson(res, 200, { lobbies: await publicLobbyList() });
+  }
+  // "Public game" switch of a host: { gameID, public }.
+  if (u.pathname === "/api/tsp/public" && req.method === "POST") {
+    const me = siteUser(req);
+    const uid = String(me?.id || "");
+    const key = hasKey(req);
+    if (!uid && !key)
+      return sendJson(res, 401, {
+        error: "Log in with Discord to make a lobby public.",
+      });
+    const b = await readJson(req, 2000);
+    const gameID = String(b?.gameID || "");
+    if (!/^[A-Za-z0-9]{4,16}$/.test(gameID))
+      return sendJson(res, 400, { error: "bad lobby" });
+    const mine = key || lastGame.get(uid)?.id === gameID;
+    if (!mine)
+      return sendJson(res, 403, {
+        error: "Only the host of this lobby can do that.",
+      });
+    if (!b.public) {
+      publicLobbies.delete(gameID);
+      publicCache.at = 0;
+      return sendJson(res, 200, { public: false });
+    }
+    const port = lastGame.get(uid)?.port || (await findGamePort(gameID));
+    const e = port
+      ? await getJsonLocal(port, `/api/game/${gameID}/exists`)
+      : null;
+    if (!e || !e.exists || e.started)
+      return sendJson(res, 409, {
+        error: "This lobby has already started or closed.",
+      });
+    // one public lobby per account: an older one of the same host leaves the list
+    for (const [id, l] of publicLobbies)
+      if (id !== gameID && l.owner === (uid || "key")) publicLobbies.delete(id);
+    if (!publicLobbies.has(gameID) && publicLobbies.size >= MAX_PUBLIC_LOBBIES)
+      return sendJson(res, 503, {
+        error:
+          "The public list is full right now. Share the invite link instead.",
+      });
+    publicLobbies.set(gameID, {
+      gameID,
+      port,
+      owner: uid || "key",
+      host: short(me?.name || "Host", 20),
+      avatar: me?.avatar || "",
+      at: publicLobbies.get(gameID)?.at || Date.now(),
+    });
+    publicCache.at = 0;
+    console.log(new Date().toISOString(), "public lobby", gameID, uid || "key");
+    return sendJson(res, 200, { public: true });
+  }
   // Game settings of a logged-in player, kept on their teamstats.pro account (src/client/TspProfile.ts).
   // The page talks to this front only; the front asks the site with a signed request naming the account
   // from the signed cookie, so nobody can read or change another account's settings.
@@ -670,13 +797,13 @@ server.on("upgrade", (req, socket, head) => {
   const up = net.connect(t.port, "127.0.0.1", () => {
     let raw = `${req.method} ${t.path} HTTP/1.1\r\n`;
     for (let i = 0; i < req.rawHeaders.length; i += 2)
-      if (!/^x-tsp-(user|name)$/i.test(req.rawHeaders[i]))
+      if (!/^x-tsp-/i.test(req.rawHeaders[i]))
         raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
     if (/^\d{5,25}$/.test(uid)) {
       raw += `x-tsp-user: ${uid}\r\n`;
-      // the account's name, for the verified badge (SiteLink.siteVerified)
-      if (who.name)
-        raw += `x-tsp-name: ${Buffer.from(String(who.name)).toString("base64url")}\r\n`;
+      // the Discord avatar shown next to the name (SiteLink.siteAvatar); checked when the cookie was made
+      if (who.avatar)
+        raw += `x-tsp-avatar: ${String(who.avatar).replace(/[^\x21-\x7e]/g, "")}\r\n`;
     }
     up.write(raw + "\r\n");
     if (head && head.length) up.write(head);

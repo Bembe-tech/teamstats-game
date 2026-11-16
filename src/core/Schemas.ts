@@ -320,6 +320,9 @@ const ClientInfoSchema = z.object({
   // preview can honour the pins instead of re-deriving teams that the server
   // will overrule at start. Absent when the game isn't matchmade.
   teamIndex: zb.uint().optional(),
+  // TeamStats.Pro: the Discord avatar of a player logged in with teamstats.pro (appended last: zbin
+  // encodes fields in declaration order).
+  avatar: z.string().max(200).optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -443,6 +446,8 @@ export interface ClientInfo {
   spectator?: boolean;
   // Server-pinned team slot for matchmade team games; absent when not matchmade.
   teamIndex?: number;
+  // TeamStats.Pro: Discord avatar of a player logged in with teamstats.pro.
+  avatar?: string;
 }
 export enum LogSeverity {
   Debug = "DEBUG",

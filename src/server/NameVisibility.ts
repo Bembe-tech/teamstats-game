@@ -210,6 +210,9 @@ export class NameVisibility {
         verified: c.cosmetics?.verified,
         spectator: c.spectator || undefined,
         teamIndex: this.view.teamIndex(c),
+        avatar: c.cosmetics?.flag?.startsWith("https://cdn.discordapp.com/")
+          ? c.cosmetics.flag
+          : undefined,
       };
     });
   }

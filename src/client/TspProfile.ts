@@ -202,12 +202,25 @@ export class TspProfileButton extends LitElement {
     return this;
   }
   private onSync = () => this.requestUpdate();
+  // "Choose skin" from elsewhere (the lobby's waiting screen, JoinLobbyModal.ts): one instance answers.
+  private static skinOpener: TspProfileButton | null = null;
+  private reloadAfterPick = false;
+  private onOpenSkins = (e: Event) => {
+    if (TspProfileButton.skinOpener !== this) return;
+    this.reloadAfterPick =
+      (e as CustomEvent<{ reload?: boolean }>).detail?.reload === true;
+    this.loadSkins();
+    this.preview = this.currentSkin();
+    this.skinModal = true;
+  };
   // The windows live in a box on <body>: the nav bar has a backdrop blur, which would trap
   // position:fixed inside the bar.
   private portal: HTMLDivElement | null = null;
   connectedCallback() {
     super.connectedCallback();
     listeners.add(this.onSync);
+    TspProfileButton.skinOpener ??= this;
+    window.addEventListener("tsp-open-skins", this.onOpenSkins);
     void tspMe().then((m) => {
       this.me = m;
       void startSettingsSync();
@@ -217,6 +230,9 @@ export class TspProfileButton extends LitElement {
     this.portal?.remove();
     this.portal = null;
     listeners.delete(this.onSync);
+    window.removeEventListener("tsp-open-skins", this.onOpenSkins);
+    if (TspProfileButton.skinOpener === this)
+      TspProfileButton.skinOpener = null;
     super.disconnectedCallback();
   }
   @state() private skins: TspGallerySkin[] | null = null;
@@ -236,6 +252,8 @@ export class TspProfileButton extends LitElement {
   private pickPattern(p: string | null) {
     setTspPatternChoice(p);
     this.pickedPattern = p;
+    // in a lobby: join again so the new skin is used in this game
+    if (this.reloadAfterPick) setTimeout(() => location.reload(), 300);
   }
   private patternCanvas(s: TspGallerySkin, w: number, h: number) {
     return html`<canvas
@@ -338,7 +356,10 @@ export class TspProfileButton extends LitElement {
           >
         </span>
       </button>`;
-    const close = () => (this.skinModal = false);
+    const close = () => {
+      this.skinModal = false;
+      this.reloadAfterPick = false;
+    };
     return html`<div
       style=${S.overlay + ";z-index:10001"}
       @click=${(e: Event) => e.target === e.currentTarget && close()}
@@ -475,9 +496,10 @@ export class TspProfileButton extends LitElement {
                 rel="noopener"
                 style="color:#6ea8ff"
                 >Skin Creator</a
-              >, share it in the gallery and anyone can play with it. Your pick
-              applies from your next
-              game${this.me?.loggedIn
+              >, share it in the gallery and anyone can play with it.
+              ${this.reloadAfterPick
+                ? "Your pick is used in this lobby right away"
+                : "Your pick applies from your next game"}${this.me?.loggedIn
                 ? " and is saved on your account."
                 : " and is saved in this browser."}
             </div>

@@ -207,6 +207,10 @@
       /* top bar: no news bell and no help "?" (Bembe 2026-11-15); settings and Your Profile stay */
       nav-utility-icons [data-page="page-news"],
       nav-utility-icons [data-page="page-help"],
+      nav-utility-icons .relative:has(> [data-page="page-news"]),
+      nav-utility-icons .relative:has(> [data-page="page-help"]),
+      /* English only for now (LangSelector.ts ENGLISH_ONLY): no language picker */
+      lang-selector,
       nav-account-menu,
       news-box,
       streaming-now,

@@ -46,6 +46,7 @@ import {
   type BackendReachabilityDetail,
 } from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./TspPublicLobbies";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -723,6 +724,7 @@ export class GameModeSelector extends LitElement {
           <span class="ts-chip">Self Economy</span>
           <span class="ts-chip">Manual teams</span>
         </div>
+        <tsp-public-lobbies></tsp-public-lobbies>
         ${this.showTrustRequired
           ? trustRequiredDialog(
               this.viewerSignedIn,

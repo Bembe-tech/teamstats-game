@@ -48,6 +48,7 @@ import { SingleplayerPresence } from "./SingleplayerPresence";
 import {
   galleryPattern,
   rememberSiteUser,
+  siteAvatar,
   siteUserHeader,
   siteVerified,
 } from "./SiteLink";
@@ -459,6 +460,8 @@ export async function startWorker() {
       exists: game !== null,
       // TeamStats.Pro front: false once the game is finished, won, or left by its host
       open: game !== null && game.holdsCreatorSlot(),
+      // TeamStats.Pro front: a started game leaves the public lobby list
+      started: game !== null && game.hasStarted(),
     });
   });
 
@@ -701,6 +704,10 @@ export async function startWorker() {
         // identity was screened at admission and must not be clobbered by
         // the coarser local fallback.
         // If successful, skip the rest of the join authorization.
+        // TeamStats.Pro: a skin picked in the lobby comes with the re-join (the page reloads)
+        const lobbyPattern = ServerEnv.openFrontApi()
+          ? undefined
+          : await galleryPattern(clientMsg.cosmetics?.patternName);
         if (
           gm.rejoinClient(
             ws,
@@ -708,6 +715,7 @@ export async function startWorker() {
             clientMsg.gameID,
             0,
             verifySkipped ? undefined : { username, clanTag },
+            lobbyPattern,
           )
         ) {
           return;
@@ -817,15 +825,23 @@ export async function startWorker() {
         // TeamStats.Pro: the check means "logged in with teamstats.pro and playing under that
         // account's name" (Bembe 2026-11-15), set by the server alone; what the client asks for is ignored.
         if (!ServerEnv.openFrontApi()) {
-          if (
-            siteVerified(
-              req.headers["x-tsp-user"],
-              req.headers["x-tsp-name"],
-              username,
-            )
-          )
+          const others =
+            gm
+              .game(clientMsg.gameID)
+              ?.activeClients()
+              .filter(
+                (c) =>
+                  c.persistentID !== persistentId &&
+                  c.cosmetics?.verified === true,
+              )
+              .map((c) => c.username) ?? [];
+          if (siteVerified(req.headers["x-tsp-user"], username, others))
             cosmeticResult.cosmetics.verified = true;
           else delete cosmeticResult.cosmetics.verified;
+          // Discord avatar next to the name: shown in the flag's place when no flag was picked
+          const avatar = siteAvatar(req.headers["x-tsp-avatar"]);
+          if (avatar && !cosmeticResult.cosmetics.flag)
+            cosmeticResult.cosmetics.flag = avatar;
         } else if (
           verifiedOutcome === "custom" &&
           clientMsg.cosmetics?.verified === true

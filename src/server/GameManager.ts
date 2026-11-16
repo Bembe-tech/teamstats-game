@@ -11,6 +11,7 @@ import {
   ClientPlatformSchema,
   GameConfig,
   GameID,
+  PlayerPattern,
   PublicGameType,
 } from "../core/Schemas";
 import { Client } from "./Client";
@@ -61,10 +62,17 @@ export class GameManager {
     gameID: GameID,
     lastTurn: number = 0,
     identityUpdate?: { username: string; clanTag: string | null },
+    tspPattern?: PlayerPattern | null,
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
+    return game.rejoinClient(
+      ws,
+      persistentID,
+      lastTurn,
+      identityUpdate,
+      tspPattern,
+    );
   }
 
   createGame(

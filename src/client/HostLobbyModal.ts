@@ -139,6 +139,9 @@ export class HostLobbyModal extends BaseModal {
   // is always shown.
   @state() private canListPublicly: boolean = false;
   @state() private publiclyListed: boolean = false;
+  // TeamStats.Pro "Public game": listed on the game's home page (teamstats/front.cjs /api/tsp/public)
+  @state() private tspPublic = false;
+  @state() private tspPublicBusy = false;
   @state() private showSubscriptionRequired: boolean = false;
   @state() private showListLobbyDialog: boolean = false;
   // Server timestamp when the listed lobby auto-starts (from lobby info).
@@ -404,6 +407,65 @@ export class HostLobbyModal extends BaseModal {
     void this.handlePublicListingToggle(isPublic);
   }
 
+  // TeamStats.Pro: "Public game" switch. On = the lobby shows on the home page of the game, where
+  // anyone (guests too) can join it; it drops off when the game starts or the lobby closes.
+  private renderTspPublicToggle() {
+    if (!this.lobbyId) return nothing;
+    return html`<button
+      type="button"
+      style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:8px 12px;border-radius:12px;border:1px solid ${this
+        .tspPublic
+        ? "rgba(87,230,255,.45)"
+        : "rgba(255,255,255,.1)"};background:${this.tspPublic
+        ? "rgba(87,230,255,.08)"
+        : "rgba(255,255,255,.03)"};color:#edf2f7;cursor:pointer;text-align:left;flex:none"
+      ?disabled=${this.tspPublicBusy}
+      @click=${() => void this.tspSetPublic(!this.tspPublic)}
+      title=${this.tspPublic
+        ? "Listed on the home page, anyone can join. Click to make it private."
+        : "Only people with the invite link can join. Click to list it on the home page."}
+    >
+      <span
+        style="font:800 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase"
+        >${this.tspPublic ? "Public game" : "Private game"}</span
+      >
+      <span
+        class="ts-switch ${this.tspPublic ? "on" : ""}"
+        aria-hidden="true"
+      ></span>
+    </button>`;
+  }
+
+  private async tspSetPublic(on: boolean) {
+    if (!this.lobbyId || this.tspPublicBusy) return;
+    this.tspPublicBusy = true;
+    try {
+      const r = await fetch("/api/tsp/public", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameID: this.lobbyId, public: on }),
+      });
+      const d = (await r.json().catch(() => ({}))) as {
+        public?: boolean;
+        error?: string;
+      };
+      if (!r.ok) throw new Error(d.error ?? "Could not change it");
+      this.tspPublic = d.public === true;
+      showToast(
+        this.tspPublic
+          ? "Your lobby is public on the home page"
+          : "Your lobby is private again",
+        "green",
+        1800,
+      );
+    } catch (e) {
+      showToast(String((e as Error).message || e), "red", 2500);
+    } finally {
+      this.tspPublicBusy = false;
+    }
+  }
+
   // TeamStats.Pro: our own game modes, each with a short explanation
   private renderGamemodes() {
     const card = (
@@ -626,6 +688,7 @@ export class HostLobbyModal extends BaseModal {
             </button>
           </div>`
         : nothing}
+      ${this.renderTspPublicToggle()}
       <button
         type="button"
         class="ts-invite"
@@ -1305,6 +1368,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
     this.publiclyListed = false;
+    this.tspPublic = false;
     this.showSubscriptionRequired = false;
     this.showListLobbyDialog = false;
     this.queued = false;

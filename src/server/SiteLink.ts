@@ -20,19 +20,28 @@ export function siteUserHeader(
   return typeof s === "string" && /^\d{5,25}$/.test(s) ? s : null;
 }
 
-// Logged in with teamstats.pro (x-tsp-user) and joining under that account's name (x-tsp-name,
-// base64url, set by front.cjs from the signed cookie). Case and spaces do not matter.
+// The verified tick (Bembe 2026-11-16): logged in with teamstats.pro, whatever name the player
+// picked. Nobody may wear the name of another verified player of the same game, though: the
+// later one keeps the name but not the tick (Worker.ts passes the names already ticked).
 export function siteVerified(
   user: string | string[] | undefined,
-  name: string | string[] | undefined,
   username: string,
+  takenVerifiedNames: Iterable<string>,
 ): boolean {
   if (!siteUserHeader(user)) return false;
-  const n = Array.isArray(name) ? name[0] : name;
-  if (typeof n !== "string" || !n) return false;
-  const account = Buffer.from(n, "base64url").toString("utf8");
   const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
-  return account.length > 0 && norm(account) === norm(username);
+  const me = norm(username);
+  for (const n of takenVerifiedNames) if (norm(n) === me) return false;
+  return true;
+}
+
+// The Discord avatar of a logged-in player (x-tsp-avatar, set by front.cjs from its signed cookie).
+export function siteAvatar(v: string | string[] | undefined): string | null {
+  const s = Array.isArray(v) ? v[0] : v;
+  return typeof s === "string" &&
+    /^https:\/\/cdn\.discordapp\.com\/[A-Za-z0-9_./?=-]{5,180}$/.test(s)
+    ? s
+    : null;
 }
 
 // Territory patterns from the public Skin Gallery of teamstats.pro (PLAY_SITE/api/skins, only what anyone

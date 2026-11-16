@@ -181,7 +181,16 @@ export class FlagAtlasArray {
       }
       const dx = (this.cellW - dw) * 0.5;
       const dy = (this.cellH - dh) * 0.5;
-      this.ctx.drawImage(img, dx, dy, dw, dh);
+      // TeamStats.Pro: a Discord avatar (shown in the flag's place) is drawn round
+      if (url.startsWith("https://cdn.discordapp.com/")) {
+        const r = Math.min(dw, dh) / 2;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(this.cellW / 2, this.cellH / 2, r, 0, Math.PI * 2);
+        this.ctx.clip();
+        this.ctx.drawImage(img, dx, dy, dw, dh);
+        this.ctx.restore();
+      } else this.ctx.drawImage(img, dx, dy, dw, dh);
 
       const gl = this.gl;
       gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex);

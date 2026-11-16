@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import {
@@ -174,11 +174,9 @@ export class LobbyTeamView extends LitElement {
                 class="player-tag ${this.isCurrentPlayer(client)
                   ? "current-player"
                   : ""}"
+                style="display:flex;width:100%;box-sizing:border-box;align-items:center;justify-content:flex-start;gap:8px;margin:0 0 4px"
               >
-                <span class="text-white"
-                  >${this.getClientDisplayName(client)}
-                  ${this.renderVerifiedBadge(client)}</span
-                >
+                ${this.renderLine(client)}
               </span>`,
           )}
         </div>
@@ -217,8 +215,9 @@ export class LobbyTeamView extends LitElement {
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
-              ${displayName} ${this.renderVerifiedBadge(client)}
-              ${this.renderFriendBadge(client)}
+              <span style="display:flex;align-items:center;gap:6px"
+                >${this.renderLine(client, displayName)}</span
+              >
             </div>`;
           },
         )}
@@ -275,19 +274,19 @@ export class LobbyTeamView extends LitElement {
       (c) => c.clientID ?? c.username,
       (client) => {
         const displayName = this.getClientDisplayName(client);
+        // TeamStats.Pro (Bembe 2026-11-16): one player per line: avatar, tag, name, tick, Host
         return html`<span
           class="player-tag ${this.isCurrentPlayer(client)
             ? "current-player"
             : ""}"
+          style="display:flex;width:100%;box-sizing:border-box;align-items:center;justify-content:flex-start;gap:8px;margin:0 0 4px"
         >
-          <span class="text-white"
-            >${displayName} ${this.renderVerifiedBadge(client)}
-            ${this.renderFriendBadge(client)}</span
-          >
-          ${this.renderRevealToggle(client.clientID)}
+          ${this.renderLine(client)} ${this.renderRevealToggle(client.clientID)}
           ${client.clientID === this.lobbyCreatorClientID
-            ? html`<span class="host-badge"
-                >(${translateText("host_modal.host_badge")})</span
+            ? html`<span
+                class="host-badge"
+                style="margin-left:auto;padding:1px 8px;border-radius:999px;background:rgba(87,230,255,.14);color:#57e6ff;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em"
+                >${translateText("host_modal.host_badge")}</span
               >`
             : this.onKickPlayer
               ? html`<button
@@ -401,6 +400,7 @@ export class LobbyTeamView extends LitElement {
                     }}
                   >
                     <span class="flex items-center gap-1 min-w-0">
+                      ${this.renderAvatar(p)}
                       <span class="truncate text-white">${displayName}</span>
                       ${this.renderVerifiedBadge(p)}
                       ${this.renderFriendBadge(p)}
@@ -595,6 +595,41 @@ export class LobbyTeamView extends LitElement {
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+  }
+
+  // TeamStats.Pro: the Discord avatar of a player logged in with teamstats.pro, left of the name.
+  // Not shown when this row's name is locally anonymized.
+  private renderAvatar(client: ClientInfo) {
+    const anonymized =
+      this.userSettings.anonymousNames() && !this.isCurrentPlayer(client);
+    // guests (and anonymized rows) get a plain circle, so the names line up
+    if (!client.avatar || anonymized)
+      return html`<span
+        class="inline-block w-5 h-5 rounded-full shrink-0"
+        style="background:rgba(255,255,255,.12)"
+        aria-hidden="true"
+      ></span>`;
+    return html`<img
+      src=${client.avatar}
+      alt=""
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      class="inline-block w-5 h-5 rounded-full shrink-0"
+    />`;
+  }
+
+  // One player's line: avatar, clan tag, name, verified tick, friend mark.
+  private renderLine(client: ClientInfo, displayName?: string) {
+    const name = displayName ?? this.getClientDisplayName(client);
+    const tag = client.clanTag ? `[${client.clanTag}]` : "";
+    const bare =
+      tag && name.startsWith(tag) ? name.slice(tag.length).trim() : name;
+    return html`${this.renderAvatar(client)}
+      ${tag && name.startsWith(tag)
+        ? html`<span class="font-bold text-white/60 shrink-0">${tag}</span>`
+        : nothing}
+      <span class="text-white truncate">${bare}</span>
+      ${this.renderVerifiedBadge(client)} ${this.renderFriendBadge(client)}`;
   }
 
   // Blue check for players on their server-validated account name. Withheld

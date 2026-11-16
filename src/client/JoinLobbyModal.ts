@@ -784,6 +784,20 @@ export class JoinLobbyModal extends BaseModal {
       >
         Save
       </button>
+      <button
+        type="button"
+        class="px-3 py-2 rounded-lg border border-sky-400/40 bg-sky-400/10 hover:bg-sky-400/20 text-sky-300 text-xs font-bold uppercase tracking-wider shrink-0"
+        title="Pick a free skin from the TeamStats.pro Skin Gallery"
+        @click=${(e: Event) => {
+          e.preventDefault();
+          // TspProfile.ts opens the Skin Gallery; picking reloads the page so this game uses it
+          window.dispatchEvent(
+            new CustomEvent("tsp-open-skins", { detail: { reload: true } }),
+          );
+        }}
+      >
+        Choose skin
+      </button>
     </form>`;
   }
 
