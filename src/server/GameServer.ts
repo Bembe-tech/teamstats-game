@@ -1657,6 +1657,11 @@ export class GameServer {
     return GamePhase.Active;
   }
 
+  // When the game left the lobby (null while it is still a lobby).
+  startedAt(): number | null {
+    return this._startTime;
+  }
+
   hasStarted(): boolean {
     return this.stage !== "lobby";
   }

@@ -474,6 +474,40 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
+  // TeamStats.Pro admin "Live games" (front /api/tsp/admin/games): every lobby and running game of
+  // this worker, for the front only (API_KEY in x-tsp-internal; the /wN/ proxy can be reached from outside).
+  app.get("/api/tsp/live", (req, res) => {
+    const key = process.env.API_KEY ?? "";
+    if (!key || req.headers["x-tsp-internal"] !== key) {
+      return res.status(403).json({ error: "forbidden" });
+    }
+    const games = gm.allGames().map((g) => {
+      const cfg = g.gameConfig;
+      const clients = g.activeClients();
+      const players = clients.filter((c) => !c.spectator);
+      return {
+        gameID: g.id,
+        phase: String(g.phase()),
+        started: g.hasStarted(),
+        paused: g.isPaused(),
+        createdAt: g.createdAt,
+        startedAt: g.startedAt(),
+        map: String(cfg.gameMap ?? ""),
+        mode: String(cfg.gameMode ?? ""),
+        teams: cfg.playerTeams === undefined ? null : String(cfg.playerTeams),
+        fog: cfg.fogOfWar === true,
+        public: g.isPublic() || g.isListed(),
+        maxPlayers: Number(cfg.maxPlayers) || null,
+        bots: Number(cfg.bots) || 0,
+        players: players.map((c) =>
+          (c.clanTag ? `[${c.clanTag}] ` : "") + String(c.username).slice(0, 30),
+        ),
+        spectators: clients.length - players.length,
+      };
+    });
+    res.json({ games });
+  });
+
   registerGamePreviewRoute({
     app,
     gm,

@@ -117,7 +117,7 @@ function readSigned(v, prefix) {
   }
 }
 // Ticket from the site's /play: base64url(JSON {id, name, aud, exp}) + "." + Ed25519 signature of the body.
-async function readTicket(t) {
+async function readTicket(t, aud = "teamstats-game") {
   if (!ticketsOn || !t) return null;
   const [body, sig] = String(t).split(".");
   if (!body || !sig) return null;
@@ -127,7 +127,7 @@ async function readTicket(t) {
   } catch {
     return null;
   }
-  if (!d || !d.id || d.aud !== "teamstats-game" || !(d.exp > Date.now()))
+  if (!d || !d.id || d.aud !== aud || !(d.exp > Date.now()))
     return null;
   for (const force of [false, true]) {
     const key = await sitePublicKey(force);
@@ -969,6 +969,68 @@ const server = http.createServer(async (req, res) => {
       console.error("Cannot store game record:", e.message);
       return sendJson(res, 500, { error: "cannot store" });
     }
+  }
+  // Admin panel of teamstats.pro (Traffic -> TeamStats Game, Bembe 2026-11-18): every open lobby and running
+  // game of all workers + the last finished games. Only for the site's server: it sends a short-lived token
+  // signed with the site's ticket key (aud "teamstats-game-admin") in x-tsp-admin, checked like a ticket.
+  if (u.pathname === "/api/tsp/admin/games" && req.method === "GET") {
+    const who = await readTicket(
+      req.headers["x-tsp-admin"],
+      "teamstats-game-admin",
+    );
+    if (!who) return sendJson(res, 403, { error: "forbidden" });
+    const live = [];
+    for (let i = 0; i < NUM_WORKERS; i++) {
+      const j = await new Promise((resolve) => {
+        const r = http.get(
+          {
+            host: "127.0.0.1",
+            port: WORKER_BASE + i,
+            path: "/api/tsp/live",
+            timeout: 2000,
+            headers: { "x-tsp-internal": INTERNAL_KEY },
+          },
+          (res2) => {
+            let b = "";
+            res2.on("data", (c) => {
+              if (b.length < 2000000) b += c;
+            });
+            res2.on("end", () => {
+              try {
+                resolve(res2.statusCode === 200 ? JSON.parse(b) : null);
+              } catch {
+                resolve(null);
+              }
+            });
+          },
+        );
+        r.on("timeout", () => r.destroy());
+        r.on("error", () => resolve(null));
+      });
+      for (const g of j?.games || []) live.push({ ...g, worker: i });
+    }
+    // who hosts it (Discord hosts and public lobbies are known here)
+    const hosts = new Map();
+    for (const l of publicLobbies.values()) hosts.set(l.gameID, l.host);
+    for (const [uid, g] of lastGame)
+      if (!hosts.has(g.id))
+        hosts.set(g.id, uid.startsWith("guest:") ? "Guest" : "Discord host");
+    for (const g of live) g.host = hosts.get(g.gameID) || "";
+    const build = String(process.env.GIT_COMMIT || "");
+    const n = Math.min(
+      200,
+      Math.max(1, Number(u.searchParams.get("limit")) || 50),
+    );
+    return sendJson(res, 200, {
+      at: Date.now(),
+      workers: NUM_WORKERS,
+      recordsKept: RECORDS_DIR ? recordIndex.length : null,
+      live,
+      recent: recordIndex.slice(0, n).map(({ commit, ...g }) => ({
+        ...g,
+        replay: build === "DEV" || commit === "DEV" || commit === build,
+      })),
+    });
   }
   // "Last games" on the home page (TspLastGames.ts).
   if (u.pathname === "/api/tsp/last-games" && req.method === "GET") {

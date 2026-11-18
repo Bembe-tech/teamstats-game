@@ -36,6 +36,11 @@ export class GameManager {
     return this.games.get(id) ?? null;
   }
 
+  // Every lobby and running game of this worker (TeamStats.Pro admin "Live games").
+  public allGames(): GameServer[] {
+    return Array.from(this.games.values());
+  }
+
   public publicLobbies(): GameServer[] {
     return Array.from(this.games.values()).filter(
       (g) => g.phase() === GamePhase.Lobby && g.isPublic(),
