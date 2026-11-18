@@ -23,7 +23,6 @@ import {
 } from "../core/Schemas";
 import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
@@ -1366,7 +1365,8 @@ export class JoinLobbyModal extends BaseModal {
   ): Promise<
     "success" | "redirected" | "not_found" | "version_mismatch" | "error"
   > {
-    const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
+    // TeamStats.Pro: finished games are kept by the game's own front (teamstats/front.cjs)
+    const archiveResponse = await fetch(`/api/tsp/game/${lobbyId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

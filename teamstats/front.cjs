@@ -17,6 +17,9 @@
 const http = require("http");
 const net = require("net");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const zlib = require("zlib");
 
 const PORT = Number(process.env.PORT || 8080);
 const MASTER = 3000;
@@ -412,6 +415,98 @@ async function gallerySkins() {
   }
   return galleryCache.items;
 }
+// Finished games, whole (turns too), for "Last games" and replays (Bembe 2026-11-18). The workers hand
+// each record to /internal/game-record; it is kept gzipped as <dir>/<gameID>.json.gz and listed in
+// <dir>/index.json (newest first, MAX_GAME_RECORDS kept, the oldest files are deleted). On Railway the
+// directory must be on a volume (mount it at /data), or the games are gone after every deploy.
+// GAME_RECORDS_DIR=off turns it off.
+const RECORDS_DIR = (() => {
+  const v = String(process.env.GAME_RECORDS_DIR || "").trim();
+  if (v === "off") return "";
+  if (v) return v;
+  return fs.existsSync("/data")
+    ? "/data/game-records"
+    : path.join(__dirname, "..", "data", "game-records");
+})();
+const MAX_GAME_RECORDS = Number(process.env.MAX_GAME_RECORDS || 3000);
+let recordIndex = [];
+if (RECORDS_DIR) {
+  try {
+    fs.mkdirSync(RECORDS_DIR, { recursive: true });
+    recordIndex = JSON.parse(
+      fs.readFileSync(path.join(RECORDS_DIR, "index.json"), "utf8"),
+    );
+    if (!Array.isArray(recordIndex)) recordIndex = [];
+  } catch {
+    recordIndex = [];
+  }
+  console.log(
+    `Game records in ${RECORDS_DIR} (${recordIndex.length} kept, max ${MAX_GAME_RECORDS})`,
+  );
+}
+const recordFile = (id) => path.join(RECORDS_DIR, `${id}.json.gz`);
+let indexWrite = Promise.resolve();
+function saveIndex() {
+  const data = JSON.stringify(recordIndex);
+  indexWrite = indexWrite.then(async () => {
+    const f = path.join(RECORDS_DIR, "index.json");
+    try {
+      await fs.promises.writeFile(f + ".tmp", data);
+      await fs.promises.rename(f + ".tmp", f);
+    } catch (e) {
+      console.error("Cannot save the game index:", e.message);
+    }
+  });
+}
+// What "Last games" shows of one game (no ids of accounts, no persistent ids).
+function recordSummary(rec) {
+  const info = rec.info || {};
+  const cfg = info.config || {};
+  const players = (info.players || []).map((p) => ({
+    id: String(p.clientID || ""),
+    name: short(p.username, 30),
+    tag: p.clanTag ? short(p.clanTag, 5) : "",
+  }));
+  const w = Array.isArray(info.winner) ? info.winner : null;
+  const winIds = new Set(
+    w ? w.slice(w[0] === "player" ? 1 : 2).map(String) : [],
+  );
+  return {
+    gameID: String(info.gameID),
+    commit: short(rec.gitCommit, 40),
+    map: short(cfg.gameMap, 40),
+    mode: short(cfg.gameMode, 20),
+    teams: cfg.playerTeams == null ? null : short(cfg.playerTeams, 20),
+    fog: cfg.fogOfWar === true,
+    start: Number(info.start) || 0,
+    end: Number(info.end) || Date.now(),
+    duration: Number(info.duration) || 0,
+    winnerTeam: w && w[0] !== "player" ? short(w[1], 30) : null,
+    winners: players.filter((p) => winIds.has(p.id)).map((p) => p.name),
+    players: players.map((p) => (p.tag ? `[${p.tag}] ${p.name}` : p.name)),
+  };
+}
+async function storeRecord(rec) {
+  const id = String(rec?.info?.gameID || "");
+  if (!RECORDS_DIR || !/^[A-Za-z0-9]{4,16}$/.test(id)) return false;
+  // persistent ids are private (OpenFront's API scrubs them too)
+  for (const p of rec.info.players || []) if (p) p.persistentID = null;
+  const gz = zlib.gzipSync(Buffer.from(JSON.stringify(rec)));
+  await fs.promises.writeFile(recordFile(id), gz);
+  recordIndex = recordIndex.filter((g) => g.gameID !== id);
+  recordIndex.unshift(recordSummary(rec));
+  for (const old of recordIndex.splice(MAX_GAME_RECORDS))
+    fs.promises.unlink(recordFile(old.gameID)).catch(() => {});
+  saveIndex();
+  console.log(
+    new Date().toISOString(),
+    "game record",
+    id,
+    Math.round(gz.length / 1024) + " KB",
+  );
+  return true;
+}
+
 // A signed request to the site ({ body: base64url(JSON), sig }), checked there with /api/tsp/pubkey.
 async function siteCall(path, payload) {
   const body = Buffer.from(
@@ -438,14 +533,20 @@ async function siteCall(path, payload) {
 }
 function readJson(req, max) {
   return new Promise((resolve) => {
-    let b = "";
+    // chunks joined as bytes, so a character split between two chunks stays whole
+    const parts = [];
+    let size = 0;
     req.on("data", (c) => {
-      b += c;
-      if (b.length > max) req.destroy();
+      parts.push(c);
+      size += c.length;
+      if (size > max) {
+        resolve(null);
+        req.destroy();
+      }
     });
     req.on("end", () => {
       try {
-        resolve(JSON.parse(b));
+        resolve(JSON.parse(Buffer.concat(parts).toString("utf8")));
       } catch {
         resolve(null);
       }
@@ -636,7 +737,10 @@ const server = http.createServer(async (req, res) => {
       gameID,
       port,
       owner: uid || "key",
-      host: short(me?.name || (uid.startsWith("guest:") ? "Guest" : "Host"), 20),
+      host: short(
+        me?.name || (uid.startsWith("guest:") ? "Guest" : "Host"),
+        20,
+      ),
       avatar: me?.avatar || "",
       at: publicLobbies.get(gameID)?.at || Date.now(),
     });
@@ -662,6 +766,61 @@ const server = http.createServer(async (req, res) => {
       ...(put ? { settings: put.settings } : {}),
     });
     return sendJson(res, r.status, r.body);
+  }
+  // The whole finished game from a worker (Archive.ts sendRecordToFront), kept on disk.
+  if (u.pathname === "/internal/game-record" && req.method === "POST") {
+    if (
+      !isLoopback(req) ||
+      req.headers["x-forwarded-for"] ||
+      !INTERNAL_KEY ||
+      req.headers["x-tsp-internal"] !== INTERNAL_KEY
+    )
+      return sendJson(res, 403, { error: "forbidden" });
+    const rec = await readJson(req, 64 * 1024 * 1024);
+    if (!rec || !rec.info || !rec.info.gameID)
+      return sendJson(res, 400, { error: "bad record" });
+    try {
+      return sendJson(res, 200, { ok: await storeRecord(rec) });
+    } catch (e) {
+      console.error("Cannot store game record:", e.message);
+      return sendJson(res, 500, { error: "cannot store" });
+    }
+  }
+  // "Last games" on the home page (TspLastGames.ts).
+  if (u.pathname === "/api/tsp/last-games" && req.method === "GET") {
+    const n = Math.min(
+      100,
+      Math.max(1, Number(u.searchParams.get("limit")) || 20),
+    );
+    // a replay plays only on the build it was recorded on (JoinLobbyModal.checkArchivedGame)
+    const build = String(process.env.GIT_COMMIT || "");
+    return sendJson(res, 200, {
+      games: recordIndex.slice(0, n).map(({ commit, ...g }) => ({
+        ...g,
+        replay: build === "DEV" || commit === "DEV" || commit === build,
+      })),
+    });
+  }
+  // One finished game, the same JSON OpenFront's archive gives; the game's replay reads it
+  // (JoinLobbyModal.checkArchivedGame).
+  const recM = /^\/api\/tsp\/game\/([A-Za-z0-9]{4,16})$/.exec(u.pathname);
+  if (recM && (req.method === "GET" || req.method === "HEAD")) {
+    if (!RECORDS_DIR) return sendJson(res, 404, { error: "not found" });
+    let gz;
+    try {
+      gz = await fs.promises.readFile(recordFile(recM[1]));
+    } catch {
+      return sendJson(res, 404, { error: "not found" });
+    }
+    const gzipOk = /gzip/.test(String(req.headers["accept-encoding"] || ""));
+    const body = gzipOk ? gz : zlib.gunzipSync(gz);
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=3600",
+      ...(gzipOk ? { "Content-Encoding": "gzip" } : {}),
+      "Content-Length": body.length,
+    });
+    return res.end(req.method === "HEAD" ? undefined : body);
   }
   // A finished game from a worker (GameServer.archiveGame -> Archive.ts), passed on to the site.
   if (u.pathname === "/internal/game-result" && req.method === "POST") {

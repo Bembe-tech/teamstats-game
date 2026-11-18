@@ -6,7 +6,9 @@ export GAME_ENV="${GAME_ENV:-prod}"
 export NUM_WORKERS="${NUM_WORKERS:-1}"
 export INSTANCE_LETTER="${INSTANCE_LETTER:-a}"
 export DOMAIN="${DOMAIN:-localhost}"
-export GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2> /dev/null || echo 0000000)}"
+# Full 40-character hash (Railway gives it; the Docker image has no .git): saved game records need it
+# (or "DEV") to replay, and a replay only plays on the same build it was recorded on.
+export GIT_COMMIT="${GIT_COMMIT:-${RAILWAY_GIT_COMMIT_SHA:-$(git rev-parse HEAD 2> /dev/null || echo DEV)}}"
 export TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY:-none}"
 export API_KEY="${API_KEY:-$(node -e 'console.log(require("crypto").randomBytes(16).toString("hex"))')}"
 export ADMIN_BOT_API_KEY="${ADMIN_BOT_API_KEY:-$API_KEY}"

@@ -46,6 +46,7 @@ import {
   type BackendReachabilityDetail,
 } from "./ServerList";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./TspLastGames";
 import "./TspPublicLobbies";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -725,6 +726,7 @@ export class GameModeSelector extends LitElement {
           <span class="ts-chip">Manual teams</span>
         </div>
         <tsp-public-lobbies></tsp-public-lobbies>
+        <tsp-last-games></tsp-last-games>
         ${this.showTrustRequired
           ? trustRequiredDialog(
               this.viewerSignedIn,
