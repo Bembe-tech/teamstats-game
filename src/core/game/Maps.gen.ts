@@ -13,21 +13,28 @@ export enum GameMapType {
   Arctic = "Arctic", // map-generator/assets/maps/arctic/info.json
   Asia = "Asia", // map-generator/assets/maps/asia/info.json
   Australia = "Australia", // map-generator/assets/maps/australia/info.json
+  BabelMandebStrait = "Bab el-Mandeb Strait", // map-generator/assets/maps/babelmandebstrait/info.json
   Baikal = "Baikal", // map-generator/assets/maps/baikal/info.json
   BaikalNukeWars = "Baikal Nuke Wars", // map-generator/assets/maps/baikalnukewars/info.json
   BajaCalifornia = "Baja California", // map-generator/assets/maps/bajacalifornia/info.json
   Balkans = "Balkans", // map-generator/assets/maps/balkans/info.json
   Balkhash = "Balkhash", // map-generator/assets/maps/balkhash/info.json
   Baltics = "Baltics", // map-generator/assets/maps/baltics/info.json
+  Benelux = "Benelux", // map-generator/assets/maps/benelux/info.json
   BeringSea = "Bering Sea", // map-generator/assets/maps/beringsea/info.json
   BeringStrait = "Bering Strait", // map-generator/assets/maps/beringstrait/info.json
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  Brahmaputra = "Brahmaputra", // map-generator/assets/maps/brahmaputra/info.json
+  BrainRot = "Brain Rot", // map-generator/assets/maps/brainrot/info.json
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
+  Canada = "Canada", // map-generator/assets/maps/canada/info.json
+  CanaryIslands = "Canary Islands", // map-generator/assets/maps/canaryislands/info.json
   CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
+  CapeOfGoodHope = "Cape Of Good Hope", // map-generator/assets/maps/capeofgoodhope/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
@@ -62,6 +69,7 @@ export enum GameMapType {
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
   Hecatestrait = "Hecate Strait", // map-generator/assets/maps/hecatestrait/info.json
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
+  HornOfAfrica = "Horn Of Africa", // map-generator/assets/maps/hornofafrica/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
   IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
@@ -74,27 +82,36 @@ export enum GameMapType {
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
   Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
+  London = "London", // map-generator/assets/maps/london/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
+  Madagascar = "Madagascar", // map-generator/assets/maps/madagascar/info.json
   Manicouagan = "Manicouagan", // map-generator/assets/maps/manicouagan/info.json
   MareNostrum = "Mare Nostrum", // map-generator/assets/maps/marenostrum/info.json
   Mars = "Mars", // map-generator/assets/maps/mars/info.json
   Mena = "Mena", // map-generator/assets/maps/mena/info.json
+  Mexico = "Mexico", // map-generator/assets/maps/mexico/info.json
   MiddleEast = "Middle East", // map-generator/assets/maps/middleeast/info.json
   MilkyWay = "MilkyWay", // map-generator/assets/maps/milkyway/info.json
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
   Montreal = "Montreal", // map-generator/assets/maps/montreal/info.json
   MoreThanLuck = "More Than Luck", // map-generator/assets/maps/morethanluck/info.json
   NewYorkCity = "New York City", // map-generator/assets/maps/newyorkcity/info.json
+  NewZealand = "New Zealand", // map-generator/assets/maps/newzealand/info.json
   NileDelta = "Nile Delta", // map-generator/assets/maps/niledelta/info.json
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
   NorthwestPassage = "Northwest Passage", // map-generator/assets/maps/northwestpassage/info.json
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
+  Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
+  OttomanEmpire = "Ottoman Empire", // map-generator/assets/maps/ottomanempire/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
+  Paris = "Paris", // map-generator/assets/maps/paris/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
+  PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
+  RioDeJaneiro = "Rio de Janeiro", // map-generator/assets/maps/riodejaneiro/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -116,16 +133,22 @@ export enum GameMapType {
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
+  Turkiye = "Turkiye", // map-generator/assets/maps/turkiye/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
+  Ukraine = "Ukraine", // map-generator/assets/maps/ukraine/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
+  VancouverIsland = "Vancouver Island", // map-generator/assets/maps/vancouverisland/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
+  WhiteSea = "White Sea", // map-generator/assets/maps/whitesea/info.json
   World = "World", // map-generator/assets/maps/world/info.json
+  World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
   Yenisei = "Yenisei", // map-generator/assets/maps/yenisei/info.json
+  Zealandia = "Zealandia", // map-generator/assets/maps/zealandia/info.json
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -361,6 +384,19 @@ export const maps: readonly MapInfo[] = [
     themes: ["oceania"],
   },
   {
+    id: "BabelMandebStrait",
+    type: GameMapType.BabelMandebStrait,
+    translationKey: "map.babelmandebstrait",
+    categories: ["africa", "asia", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 26,
+    specialTeamCount: 2,
+    themes: ["africa", "asia"],
+  },
+  {
     id: "Baikal",
     type: GameMapType.Baikal,
     translationKey: "map.baikal",
@@ -436,6 +472,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe"],
   },
   {
+    id: "Benelux",
+    type: GameMapType.Benelux,
+    translationKey: "map.benelux",
+    categories: ["europe", "countries", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 8,
+    themes: ["europe"],
+  },
+  {
     id: "BeringSea",
     type: GameMapType.BeringSea,
     translationKey: "map.beringsea",
@@ -499,6 +547,32 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe", "asia"],
   },
   {
+    id: "Brahmaputra",
+    type: GameMapType.Brahmaputra,
+    translationKey: "map.brahmaputra",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 37,
+    specialTeamCount: 2,
+    themes: ["asia"],
+  },
+  {
+    id: "BrainRot",
+    type: GameMapType.BrainRot,
+    translationKey: "map.brainrot",
+    categories: ["arcade", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 43,
+    themes: ["space", "war"],
+    layers: [{ id: "brainland", placement: "land", nukeable: true }],
+  },
+  {
     id: "BranchingPaths",
     type: GameMapType.BranchingPaths,
     translationKey: "map.branchingpaths",
@@ -535,16 +609,114 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe"],
   },
   {
+    id: "Canada",
+    type: GameMapType.Canada,
+    translationKey: "map.canada",
+    categories: ["north_america", "countries", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 38,
+    themes: ["north_america"],
+    customTribes: [
+      { name: "Toronto", coordinates: [2538, 2415] },
+      { name: "Ottawa", coordinates: [2668, 2269] },
+      { name: "Edmonton", coordinates: [1318, 1845] },
+      { name: "Winnipeg", coordinates: [1836, 2134] },
+      { name: "Québec City", coordinates: [2806, 2136] },
+      { name: "Halifax", coordinates: [3131, 2121] },
+      { name: "Victoria", coordinates: [897, 1988] },
+      { name: "Regina", coordinates: [1575, 2078] },
+      { name: "St. John's", coordinates: [3398, 1774] },
+      { name: "Fredericton", coordinates: [2990, 2110] },
+      { name: "Charlottetown", coordinates: [3092, 2045] },
+      { name: "Whitehorse", coordinates: [921, 1221] },
+      { name: "Yellowknife", coordinates: [1425, 1384] },
+      { name: "Iqaluit", coordinates: [2529, 1250] },
+      { name: "Montréal", coordinates: [2746, 2250] },
+      { name: "Vancouver", coordinates: [924, 1959] },
+      { name: "Calgary", coordinates: [1260, 1979] },
+      { name: "Hamilton", coordinates: [2539, 2444] },
+      { name: "Oshawa", coordinates: [2569, 2399] },
+      { name: "Kitchener", coordinates: [2509, 2439] },
+      { name: "London", coordinates: [2485, 2473] },
+      { name: "Windsor", coordinates: [2420, 2525] },
+      { name: "Saskatoon", coordinates: [1519, 1983] },
+      { name: "Barrie", coordinates: [2529, 2380] },
+      { name: "Sudbury", coordinates: [2453, 2276] },
+      { name: "Abbotsford", coordinates: [946, 1983] },
+      { name: "Sarnia", coordinates: [2438, 2483] },
+      { name: "Sherbrooke", coordinates: [2811, 2232] },
+      { name: "Kelowna", coordinates: [1058, 1980] },
+      { name: "Trois-Rivières", coordinates: [2767, 2191] },
+      { name: "Kingston", coordinates: [2659, 2351] },
+      { name: "Thunder Bay", coordinates: [2125, 2217] },
+      { name: "Moncton", coordinates: [3052, 2083] },
+      { name: "Saint John", coordinates: [3027, 2147] },
+      { name: "Nanaimo", coordinates: [893, 1952] },
+      { name: "Peterborough", coordinates: [2584, 2371] },
+      { name: "Saint-Jérôme", coordinates: [2726, 2241] },
+      { name: "Red Deer", coordinates: [1288, 1924] },
+      { name: "Lethbridge", coordinates: [1282, 2068] },
+      { name: "Kamloops", coordinates: [1047, 1917] },
+      { name: "Prince George", coordinates: [1046, 1734] },
+      { name: "Medicine Hat", coordinates: [1359, 2072] },
+      { name: "Drummondville", coordinates: [2780, 2215] },
+      { name: "Saguenay", coordinates: [2780, 2063] },
+      { name: "Chilliwack", coordinates: [961, 1982] },
+      { name: "North Bay", coordinates: [2513, 2273] },
+      { name: "Shawinigan", coordinates: [2758, 2183] },
+      { name: "Cornwall", coordinates: [2711, 2289] },
+      { name: "Joliette", coordinates: [2742, 2220] },
+      { name: "Belleville", coordinates: [2623, 2367] },
+      { name: "Victoriaville", coordinates: [2796, 2199] },
+      { name: "Grande Prairie", coordinates: [1187, 1720] },
+      { name: "Penticton", coordinates: [1047, 1999] },
+      { name: "Sydney", coordinates: [3215, 2002] },
+      { name: "Orillia", coordinates: [2537, 2366] },
+      { name: "Rimouski", coordinates: [2867, 2026] },
+      { name: "Timmins", coordinates: [2416, 2171] },
+      { name: "Prince Albert", coordinates: [1561, 1936] },
+      { name: "Campbell River", coordinates: [873, 1888] },
+      { name: "Courtenay", coordinates: [873, 1908] },
+    ],
+  },
+  {
+    id: "CanaryIslands",
+    type: GameMapType.CanaryIslands,
+    translationKey: "map.canaryislands",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 14,
+    themes: ["africa"],
+  },
+  {
     id: "CapeCod",
     type: GameMapType.CapeCod,
     translationKey: "map.capecod",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 4,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 31,
     themes: ["north_america"],
+  },
+  {
+    id: "CapeOfGoodHope",
+    type: GameMapType.CapeOfGoodHope,
+    translationKey: "map.capeofgoodhope",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 26,
+    themes: ["africa"],
   },
   {
     id: "Caribbean",
@@ -587,7 +759,7 @@ export const maps: readonly MapInfo[] = [
     id: "CentralAmerica",
     type: GameMapType.CentralAmerica,
     translationKey: "map.centralamerica",
-    categories: ["new", "north_america"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -599,7 +771,7 @@ export const maps: readonly MapInfo[] = [
     id: "ChannelIslands",
     type: GameMapType.ChannelIslands,
     translationKey: "map.channelislands",
-    categories: ["new", "north_america"],
+    categories: ["north_america"],
     multiplayerFrequency: 4,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -713,7 +885,7 @@ export const maps: readonly MapInfo[] = [
     id: "China",
     type: GameMapType.China,
     translationKey: "map.china",
-    categories: ["countries", "asia", "new"],
+    categories: ["countries", "asia"],
     multiplayerFrequency: 8,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1400,7 +1572,7 @@ export const maps: readonly MapInfo[] = [
     id: "GulfOfMexico",
     type: GameMapType.GulfOfMexico,
     translationKey: "map.gulfofmexico",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1468,6 +1640,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 71,
     themes: ["asia"],
+  },
+  {
+    id: "HornOfAfrica",
+    type: GameMapType.HornOfAfrica,
+    translationKey: "map.hornofafrica",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 29,
+    themes: ["africa"],
   },
   {
     id: "Iceland",
@@ -1613,6 +1797,18 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 15,
+    themes: ["europe"],
+  },
+  {
+    id: "London",
+    type: GameMapType.London,
+    translationKey: "map.london",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 32,
     themes: ["europe"],
   },
   {
@@ -1781,6 +1977,20 @@ export const maps: readonly MapInfo[] = [
     forcedModifiers: ["isWaterNukes:50"],
   },
   {
+    id: "Madagascar",
+    type: GameMapType.Madagascar,
+    translationKey: "map.madagascar",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    specialTeamCount: 2,
+    forcedModifiers: ["isWaterNukes:50"],
+    themes: ["africa"],
+  },
+  {
     id: "Manicouagan",
     type: GameMapType.Manicouagan,
     translationKey: "map.manicouagan",
@@ -1826,6 +2036,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 35,
     themes: ["asia", "africa"],
+  },
+  {
+    id: "Mexico",
+    type: GameMapType.Mexico,
+    translationKey: "map.mexico",
+    categories: ["north_america", "countries", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 32,
+    themes: ["north_america"],
   },
   {
     id: "MiddleEast",
@@ -1899,6 +2121,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["north_america"],
   },
   {
+    id: "NewZealand",
+    type: GameMapType.NewZealand,
+    translationKey: "map.newzealand",
+    categories: ["oceania", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 20,
+    themes: ["oceania"],
+  },
+  {
     id: "NileDelta",
     type: GameMapType.NileDelta,
     translationKey: "map.niledelta",
@@ -1948,6 +2182,23 @@ export const maps: readonly MapInfo[] = [
     themes: ["oceania"],
   },
   {
+    id: "Ommatrypta",
+    type: GameMapType.Ommatrypta,
+    translationKey: "map.ommatrypta",
+    categories: ["arcade", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    specialTeamCount: 13,
+    themes: ["scary", "fantasy"],
+    layers: [
+      { id: "eyeland", placement: "land", nukeable: true },
+      { id: "eyewater", placement: "water" },
+    ],
+  },
+  {
     id: "Onion",
     type: GameMapType.Onion,
     translationKey: "map.onion",
@@ -1959,6 +2210,18 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 3,
   },
   {
+    id: "OttomanEmpire",
+    type: GameMapType.OttomanEmpire,
+    translationKey: "map.ottomanempire",
+    categories: ["europe", "asia", "africa", "countries", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 46,
+    themes: ["europe", "asia", "africa"],
+  },
+  {
     id: "Pangaea",
     type: GameMapType.Pangaea,
     translationKey: "map.pangaea",
@@ -1968,6 +2231,70 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 29,
+  },
+  {
+    id: "Paris",
+    type: GameMapType.Paris,
+    translationKey: "map.paris",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 60,
+    themes: ["europe"],
+    customTribes: [
+      { name: "Bonne-Nouvelle" },
+      { name: "Croulebarbe" },
+      { name: "Enfants-Rouges" },
+      { name: "Europe" },
+      { name: "Folie-Méricourt" },
+      { name: "Gaillon" },
+      { name: "Gare d'Austerlitz" },
+      { name: "Mail" },
+      { name: "Monnaie" },
+      { name: "Necker" },
+      { name: "Porte-Saint-Martin" },
+      { name: "Quinze-Vingts" },
+      { name: "Saint-Georges" },
+      { name: "Saint-Merri" },
+      { name: "Saint-Thomas-d'Aquin" },
+      { name: "Saint-Victor" },
+      { name: "Saint-Vincent-de-Paul" },
+      { name: "Sainte-Avoye" },
+      { name: "Sainte-Marguerite" },
+      { name: "Vivienne" },
+      { name: "Tour Eiffel" },
+      { name: "Louvre" },
+      { name: "Notre-Dame" },
+      { name: "Sacré-Cœur" },
+      { name: "Bastille" },
+      { name: "Pigalle" },
+      { name: "Châtelet" },
+      { name: "République" },
+      { name: "Nation" },
+      { name: "Trocadéro" },
+      { name: "Arc de Triomphe" },
+      { name: "Panthéon" },
+      { name: "Gare du Nord" },
+      { name: "Gare de Lyon" },
+      { name: "Oberkampf" },
+      { name: "Canal Saint-Martin" },
+      { name: "Butte-aux-Cailles" },
+      { name: "Le Marais" },
+      { name: "Buttes-Chaumont" },
+      { name: "Bercy Village" },
+      { name: "Place d'Italie" },
+      { name: "Denfert-Rochereau" },
+      { name: "Porte Maillot" },
+      { name: "Stalingrad" },
+      { name: "Ménilmontant" },
+      { name: "Barbès" },
+      { name: "Alésia" },
+      { name: "Beaugrenelle" },
+      { name: "Porte de Versailles" },
+      { name: "Parc Monceau" },
+    ],
   },
   {
     id: "Passage",
@@ -1993,6 +2320,19 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
   },
   {
+    id: "PulicatLake",
+    type: GameMapType.PulicatLake,
+    translationKey: "map.pulicatlake",
+    categories: ["asia", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 12,
+    specialTeamCount: 2,
+    themes: ["asia"],
+  },
+  {
     id: "QingChina",
     type: GameMapType.QingChina,
     translationKey: "map.qingchina",
@@ -2003,6 +2343,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 32,
     themes: ["asia"],
+  },
+  {
+    id: "RioDeJaneiro",
+    type: GameMapType.RioDeJaneiro,
+    translationKey: "map.riodejaneiro",
+    categories: ["south_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 30,
+    themes: ["south_america"],
   },
   {
     id: "Russia",
@@ -2305,6 +2657,18 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
   },
   {
+    id: "Turkiye",
+    type: GameMapType.Turkiye,
+    translationKey: "map.turkiye",
+    categories: ["countries", "europe", "asia", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 30,
+    themes: ["europe", "asia"],
+  },
+  {
     id: "TwoLakes",
     type: GameMapType.TwoLakes,
     translationKey: "map.twolakes",
@@ -2317,6 +2681,121 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe"],
   },
   {
+    id: "Ukraine",
+    type: GameMapType.Ukraine,
+    translationKey: "map.ukraine",
+    categories: ["europe", "countries", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 33,
+    themes: ["ukraine"],
+    customTribes: [
+      { name: "Znamianka", coordinates: [1197, 672] },
+      { name: "Berehove", coordinates: [83, 758] },
+      { name: "Yalta", coordinates: [1364, 1356] },
+      { name: "Starobilsk", coordinates: [1891, 577] },
+      { name: "Sarny", coordinates: [524, 219] },
+      { name: "Bolhrad", coordinates: [746, 1170] },
+      { name: "Shostka", coordinates: [1287, 124] },
+      { name: "Berdiansk", coordinates: [1655, 997] },
+      { name: "Mohyliv-Podilskyi", coordinates: [657, 718] },
+      { name: "Irpin", coordinates: [928, 363] },
+      { name: "Ochakiv", coordinates: [1072, 1019] },
+      { name: "Okhtyrka", coordinates: [1444, 399] },
+      { name: "Pavlohrad", coordinates: [1553, 703] },
+      { name: "Chervonohrad", coordinates: [261, 385] },
+      { name: "Uman", coordinates: [925, 667] },
+      { name: "Kolomyia", coordinates: [349, 705] },
+      { name: "Henichesk", coordinates: [1435, 1091] },
+      { name: "Pryluky", coordinates: [1166, 350] },
+      { name: "Makiivka", coordinates: [1787, 783] },
+      { name: "Nikopol", coordinates: [1389, 864] },
+      { name: "Kerch", coordinates: [1620, 1221] },
+      { name: "Chuhuiv", coordinates: [1643, 481] },
+      { name: "Berdychiv", coordinates: [743, 471] },
+      { name: "Truskavets", coordinates: [179, 585] },
+      { name: "Yuzhnoukrainsk", coordinates: [1032, 822] },
+      { name: "Slavutych", coordinates: [985, 186] },
+      { name: "Podilsk", coordinates: [848, 834] },
+      { name: "Korosten", coordinates: [749, 288] },
+      { name: "Nova Kakhovka", coordinates: [1271, 1000] },
+      { name: "Netishyn", coordinates: [529, 395] },
+      { name: "Orikhiv", coordinates: [1544, 863] },
+      { name: "Sviatohirsk", coordinates: [1742, 619] },
+      { name: "Myrhorod", coordinates: [1302, 460] },
+      { name: "Kovel", coordinates: [312, 241] },
+      { name: "Bilhorod-Dnistrovskyi", coordinates: [939, 1088] },
+      { name: "Yevpatoriia", coordinates: [1275, 1246] },
+      { name: "Kamianets-Podilskyi", coordinates: [521, 679] },
+      { name: "Kamianske", coordinates: [1413, 706] },
+      { name: "Pereiaslav", coordinates: [1061, 442] },
+      { name: "Feodosiia", coordinates: [1498, 1272] },
+      { name: "Melitopol", coordinates: [1499, 982] },
+      { name: "Bila Tserkva", coordinates: [914, 487] },
+      { name: "Smila", coordinates: [1110, 584] },
+      { name: "Rakhiv", coordinates: [257, 783] },
+      { name: "Konotop", coordinates: [1257, 236] },
+      { name: "Novohrad-Volynskyi", coordinates: [635, 350] },
+      { name: "Alchevsk", coordinates: [1879, 714] },
+      { name: "Kremenets", coordinates: [425, 437] },
+      { name: "Skadovsk", coordinates: [1224, 1099] },
+      { name: "Dobropillia", coordinates: [1689, 714] },
+      { name: "Kremenchuk", coordinates: [1282, 608] },
+      { name: "Kupiansk", coordinates: [1747, 503] },
+      { name: "Chortkiv", coordinates: [433, 622] },
+      { name: "Zhmerynka", coordinates: [691, 619] },
+      { name: "Kalush", coordinates: [274, 620] },
+      { name: "Nizhyn", coordinates: [1110, 270] },
+      { name: "Vuhledar", coordinates: [1706, 829] },
+      { name: "Haisyn", coordinates: [833, 656] },
+      { name: "Bakhmut", coordinates: [1790, 694] },
+      { name: "Dzhankoi", coordinates: [1389, 1164] },
+      { name: "Varash", coordinates: [440, 216] },
+      { name: "Volodymyr", coordinates: [270, 306] },
+      { name: "Lozova", coordinates: [1603, 644] },
+      { name: "Chornobyl", coordinates: [925, 232] },
+      { name: "Boryspil", coordinates: [1006, 392] },
+      { name: "Sievierodonetsk", coordinates: [1845, 633] },
+      { name: "Khust", coordinates: [155, 763] },
+      { name: "Lubny", coordinates: [1235, 451] },
+      { name: "Sambir", coordinates: [144, 536] },
+      { name: "Selydove", coordinates: [1712, 768] },
+      { name: "Izmail", coordinates: [771, 1222] },
+      { name: "Yaremche", coordinates: [294, 716] },
+      { name: "Huliaipole", coordinates: [1597, 848] },
+      { name: "Dubno", coordinates: [428, 382] },
+      { name: "Pervomaisk", coordinates: [993, 784] },
+      { name: "Tokmak", coordinates: [1535, 915] },
+      { name: "Shepetivka", coordinates: [574, 422] },
+      { name: "Fastiv", coordinates: [891, 440] },
+      { name: "Oleksandriia", coordinates: [1247, 680] },
+      { name: "Siversk", coordinates: [1800, 647] },
+      { name: "Voznesensk", coordinates: [1049, 864] },
+      { name: "Horlivka", coordinates: [1790, 741] },
+      { name: "Izium", coordinates: [1710, 592] },
+      { name: "Volnovakha", coordinates: [1734, 858] },
+      { name: "Mukachevo", coordinates: [91, 719] },
+      { name: "Alushta", coordinates: [1391, 1328] },
+      { name: "Chornomorsk", coordinates: [973, 1070] },
+      { name: "Stryi", coordinates: [217, 581] },
+      { name: "Mykolaivka", coordinates: [1766, 648] },
+      { name: "Brovary", coordinates: [988, 364] },
+      { name: "Enerhodar", coordinates: [1419, 877] },
+      { name: "Avdiivka", coordinates: [1762, 770] },
+      { name: "Kurakhove", coordinates: [1710, 795] },
+      { name: "Pokrovsk", coordinates: [1699, 746] },
+      { name: "Yenakiieve", coordinates: [1811, 754] },
+      { name: "Toretsk", coordinates: [1773, 726] },
+      { name: "Soledar", coordinates: [1798, 675] },
+      { name: "Chasiv Yar", coordinates: [1770, 689] },
+      { name: "Lyman", coordinates: [1770, 628] },
+      { name: "Kakhovka", coordinates: [1288, 989] },
+      { name: "Drohobych", coordinates: [179, 565] },
+    ],
+  },
+  {
     id: "UnitedStates",
     type: GameMapType.UnitedStates,
     translationKey: "map.unitedstates",
@@ -2326,6 +2805,18 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 49,
+    themes: ["north_america"],
+  },
+  {
+    id: "VancouverIsland",
+    type: GameMapType.VancouverIsland,
+    translationKey: "map.vancouverisland",
+    categories: ["north_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 32,
     themes: ["north_america"],
   },
   {
@@ -2365,6 +2856,18 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 10,
   },
   {
+    id: "WhiteSea",
+    type: GameMapType.WhiteSea,
+    translationKey: "map.whitesea",
+    categories: ["europe", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    themes: ["europe"],
+  },
+  {
     id: "World",
     type: GameMapType.World,
     translationKey: "map.world",
@@ -2376,6 +2879,22 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 72,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+  },
+  {
+    id: "World4000",
+    type: GameMapType.World4000,
+    translationKey: "map.world4000",
+    categories: ["world", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 111,
+    forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
   },
   {
     id: "WorldInverted",
@@ -2392,7 +2911,7 @@ export const maps: readonly MapInfo[] = [
     id: "YangtzeRiver",
     type: GameMapType.YangtzeRiver,
     translationKey: "map.yangtzeriver",
-    categories: ["new", "asia"],
+    categories: ["asia"],
     multiplayerFrequency: 3,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -2422,5 +2941,17 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 6,
     themes: ["asia"],
+  },
+  {
+    id: "Zealandia",
+    type: GameMapType.Zealandia,
+    translationKey: "map.zealandia",
+    categories: ["oceania", "fictional", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 27,
+    themes: ["under_ocean", "oceania"],
   },
 ];

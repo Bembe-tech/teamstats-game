@@ -2,6 +2,7 @@ import { assetUrl } from "../AssetUrls";
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
+import { isTspMap, tspMapFileUrl } from "./TspMaps";
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
@@ -37,7 +38,11 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         })
         .then((buf) => new Uint8Array(buf));
 
-    const mapAssetUrl = (path: string) => assetUrl(`maps/${fileName}/${path}`);
+    // TeamStats maps (TspMaps.ts) come from the game's front, not from the bundled assets.
+    const mapAssetUrl = (path: string) =>
+      isTspMap(map)
+        ? tspMapFileUrl(map, path)
+        : assetUrl(`maps/${fileName}/${path}`);
 
     const mapData = {
       mapBin: this.createLazyLoader(() => loadBinary(mapAssetUrl("map.bin"))),
@@ -56,12 +61,15 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         }),
       ),
       webpPath: mapAssetUrl("thumbnail.webp"),
+      // Layers ship as .png (older maps) or .webp (maps taken from newer
+      // OpenFront releases); try png first, then webp.
       layerPng: (layerId: string) =>
         fetch(mapAssetUrl(`${layerId}.png`))
+          .then((res) => (res.ok ? res : fetch(mapAssetUrl(`${layerId}.webp`))))
           .then((res) => {
             if (!res.ok)
               throw new Error(
-                `Failed to load ${mapAssetUrl(`${layerId}.png`)}`,
+                `Failed to load ${mapAssetUrl(`${layerId}.png`)} or .webp`,
               );
             return res.blob();
           })

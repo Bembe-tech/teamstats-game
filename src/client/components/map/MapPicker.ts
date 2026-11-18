@@ -10,6 +10,12 @@ import {
   MapInfo,
   maps,
 } from "../../../core/game/Game";
+import {
+  TspMapInfo,
+  tspMapName,
+  tspMapValue,
+} from "../../../core/game/TspMaps";
+import { loadTspMaps, TspMapList } from "../../TspMapsClient";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
@@ -48,6 +54,22 @@ export class MapPicker extends LitElement {
     mapCategoryOrder.filter((categoryKey) => categoryKey !== "featured"),
   );
   @state() private favorites: GameMapType[] = getFavoriteMaps();
+  // TeamStats.Pro: public maps of the teamstats.pro Map Gallery (TspMapsClient.ts)
+  @state() private tspMaps: TspMapList = {
+    items: [],
+    gallery: null,
+    creator: null,
+  };
+  @state() private tspLoading = true;
+  @state() private tspExpanded = true;
+
+  connectedCallback() {
+    super.connectedCallback();
+    loadTspMaps().then((list) => {
+      this.tspMaps = list;
+      this.tspLoading = false;
+    });
+  }
 
   createRenderRoot() {
     return this;
@@ -88,6 +110,124 @@ export class MapPicker extends LitElement {
 
   private preventImageDrag(event: DragEvent) {
     event.preventDefault();
+  }
+
+  private get filteredTspMaps(): TspMapInfo[] {
+    const query = this.searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    return this.tspMaps.items.filter(
+      (m) =>
+        m.name.toLowerCase().includes(query) ||
+        (m.owner ?? "").toLowerCase().includes(query),
+    );
+  }
+
+  private renderTspCard(info: TspMapInfo) {
+    const value = tspMapValue(info.id, info.v);
+    const by = info.owner ? ` by ${info.owner}` : "";
+    const stars =
+      info.ratings > 0 ? ` · ${info.rating.toFixed(1)}★ (${info.ratings})` : "";
+    return html`
+      <div
+        @click=${() => this.handleMapSelection(value)}
+        class="cursor-pointer"
+        title="${tspMapName(value)}${by} · ${info.w}×${info.h}${stars}"
+      >
+        <map-display
+          .mapKey=${value}
+          .selected=${!this.useRandomMap && this.selectedMap === value}
+          .translation=${info.name}
+        ></map-display>
+      </div>
+    `;
+  }
+
+  private renderTspGrid(list: TspMapInfo[]) {
+    return html`<div
+      class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+    >
+      ${repeat(
+        list,
+        (m) => `${m.id}:${m.v}`,
+        (m) => this.renderTspCard(m),
+      )}
+    </div>`;
+  }
+
+  private renderTspLinks() {
+    const { gallery, creator } = this.tspMaps;
+    if (!gallery && !creator) return null;
+    return html`<div
+      class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50 mb-3 pl-2"
+    >
+      ${gallery
+        ? html`<a
+            href=${gallery}
+            target="_blank"
+            rel="noopener"
+            class="underline hover:text-white"
+            >Map Gallery on teamstats.pro</a
+          >`
+        : null}
+      ${creator
+        ? html`<a
+            href=${creator}
+            target="_blank"
+            rel="noopener"
+            class="underline hover:text-white"
+            >Make your own map (Map Creator)</a
+          >`
+        : null}
+    </div>`;
+  }
+
+  // "TeamStats maps": the first group of the All tab.
+  private renderTspSection() {
+    const list = this.tspMaps.items;
+    const expanded = this.tspExpanded;
+    return html`<div class="w-full">
+      <button
+        type="button"
+        aria-expanded=${expanded}
+        @click=${() => (this.tspExpanded = !this.tspExpanded)}
+        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all duration-200 active:scale-[0.99] ${expanded
+          ? "bg-malibu-blue/20 border-malibu-blue/50"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+      >
+        <span
+          class="flex items-center gap-3 text-sm font-bold text-white uppercase tracking-wider"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded
+              ? "rotate-90"
+              : ""}"
+            viewBox="0 0 12 12"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M4 2l5 4-5 4z" />
+          </svg>
+          TeamStats maps
+        </span>
+        <span class="text-xs font-bold text-white/40"
+          >${this.tspLoading ? "…" : list.length}</span
+        >
+      </button>
+      ${expanded
+        ? html`<div class="mt-4">
+            ${this.renderTspLinks()}
+            ${this.tspLoading
+              ? html`<p class="text-sm text-white/50 pl-2">
+                  ${translateText("common.loading")}
+                </p>`
+              : list.length === 0
+                ? html`<p class="text-sm text-white/50 pl-2">
+                    No public maps in the teamstats.pro Map Gallery yet.
+                  </p>`
+                : this.renderTspGrid(list)}
+          </div>`
+        : null}
+    </div>`;
   }
 
   private get filteredMaps(): MapInfo[] {
@@ -198,6 +338,7 @@ export class MapPicker extends LitElement {
 
   private renderAllTab() {
     return html`<div class="space-y-3">
+      ${this.renderTspSection()}
       ${this.allCategories.map((categoryKey) =>
         this.renderCategoryBar(categoryKey, mapsInCategory(categoryKey)),
       )}
@@ -270,7 +411,8 @@ export class MapPicker extends LitElement {
 
   private renderSearchResults() {
     const results = this.filteredMaps;
-    if (results.length === 0) {
+    const tspResults = this.filteredTspMaps;
+    if (results.length === 0 && tspResults.length === 0) {
       return html`<div
         class="w-full flex flex-col items-center justify-center gap-3 py-12 px-4 text-center rounded-xl border border-dashed border-white/10 bg-black/20"
       >
@@ -292,9 +434,15 @@ export class MapPicker extends LitElement {
     }
     return html`<div class="w-full">
       ${this.renderSectionHeading(
-        `${translateText("map_component.search_results")} (${results.length})`,
+        `${translateText("map_component.search_results")} (${results.length + tspResults.length})`,
       )}
       ${this.renderMapGrid(results)}
+      ${tspResults.length > 0
+        ? html`<div class="mt-6">
+            ${this.renderSectionHeading("TeamStats maps")}
+            ${this.renderTspGrid(tspResults)}
+          </div>`
+        : null}
     </div>`;
   }
 

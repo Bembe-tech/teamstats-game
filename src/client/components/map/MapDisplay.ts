@@ -1,6 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
+import {
+  isTspMap,
+  tspMapFileUrl,
+  tspMapInfo,
+  tspMapName,
+} from "../../../core/game/TspMaps";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
 import { starIcon } from "./MapFavorites";
@@ -66,6 +72,13 @@ export class MapDisplay extends LitElement {
 
     try {
       this.isLoading = true;
+      // TeamStats maps: only the preview; the map itself is built on teamstats.pro when a game needs it.
+      if (isTspMap(this.mapKey)) {
+        this.mapWebpPath = tspMapFileUrl(this.mapKey, "thumbnail.webp");
+        this.mapName = tspMapName(this.mapKey);
+        this.hasNations = (tspMapInfo(this.mapKey)?.nations ?? 0) > 0;
+        return;
+      }
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = data.webpPath;

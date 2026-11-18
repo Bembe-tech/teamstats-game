@@ -648,10 +648,13 @@ describe("Map consistency", () => {
             `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
           );
         }
+        // resources/ may ship the layer as .png or .webp (maps taken from
+        // newer OpenFront releases); the map loaders try png, then webp.
         const resPng = path.join(resDir, `${layer.id}.png`);
-        if (!fs.existsSync(resPng)) {
+        const resWebp = path.join(resDir, `${layer.id}.webp`);
+        if (!fs.existsSync(resPng) && !fs.existsSync(resWebp)) {
           errors.push(
-            `${key}: layer PNG "${layer.id}.png" missing in resources/maps/${folder}/`,
+            `${key}: layer "${layer.id}.png" / ".webp" missing in resources/maps/${folder}/`,
           );
         }
       }

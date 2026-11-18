@@ -32,3 +32,6 @@ map-generator/map-generator.exe
 # up after each case; ignored so a crashed run cannot dirty the tree.
 .tmp-desktop-cli-*
 teamstats/last-build.log
+
+# TeamStats front data kept locally (game records, TeamStats maps); on Railway it lives on the /data volume
+/data/

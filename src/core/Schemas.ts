@@ -23,6 +23,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import { TSP_MAP_RE } from "./game/TspMaps";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
@@ -532,8 +533,15 @@ export const PoolConfigSchema = z
   });
 export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
+// A built-in map, or a TeamStats map of the teamstats.pro Map Gallery ("tsp:<id>:<version>",
+// core/game/TspMaps.ts), carried as a GameMapType value.
+const GameMapSchema = z.union([
+  z.enum(GameMapType),
+  z.string().regex(TSP_MAP_RE),
+]) as unknown as z.ZodType<GameMapType>; // zbin derives its codec from the plain union
+
 export const GameConfigSchema = z.object({
-  gameMap: z.enum(GameMapType),
+  gameMap: GameMapSchema,
   difficulty: z.enum(Difficulty),
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
@@ -1027,7 +1035,7 @@ export const ServerPingMessageSchema = z.object({
 
 export const ServerPrestartMessageSchema = z.object({
   type: z.literal("prestart"),
-  gameMap: z.enum(GameMapType),
+  gameMap: GameMapSchema,
   gameMapSize: z.enum(GameMapSize),
 });
 

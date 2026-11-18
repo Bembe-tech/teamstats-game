@@ -1,5 +1,6 @@
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { isTspMap, tspMapFileUrl } from "./TspMaps";
 
 export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
@@ -20,19 +21,26 @@ export class FetchGameMapLoader implements GameMapLoader {
       (k) => GameMapType[k as keyof typeof GameMapType] === map,
     );
     const fileName = key?.toLowerCase();
+    const tsp = isTspMap(map);
 
-    if (!fileName) {
+    if (!fileName && !tsp) {
       throw new Error(`Unknown map: ${map}`);
     }
+    // TeamStats maps (TspMaps.ts) come from the game's front, not from the bundled assets.
+    const url = (path: string) =>
+      tsp ? tspMapFileUrl(map, path) : this.url(fileName!, path);
 
     const mapData = {
-      mapBin: () => this.loadBinaryFromUrl(this.url(fileName, "map.bin")),
-      map4xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map4x.bin")),
-      map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
-      manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
-      webpPath: this.url(fileName, "thumbnail.webp"),
+      mapBin: () => this.loadBinaryFromUrl(url("map.bin")),
+      map4xBin: () => this.loadBinaryFromUrl(url("map4x.bin")),
+      map16xBin: () => this.loadBinaryFromUrl(url("map16x.bin")),
+      manifest: () => this.loadJsonFromUrl(url("manifest.json")),
+      webpPath: url("thumbnail.webp"),
+      // Layers ship as .png (older maps) or .webp (newer OpenFront maps).
       layerPng: (layerId: string) =>
-        this.loadImageBitmap(this.url(fileName, `${layerId}.png`)),
+        this.loadImageBitmap(url(`${layerId}.png`)).catch(() =>
+          this.loadImageBitmap(url(`${layerId}.webp`)),
+        ),
     } satisfies MapData;
 
     this.maps.set(map, mapData);

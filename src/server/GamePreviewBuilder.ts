@@ -3,6 +3,7 @@ import { buildAssetUrl } from "../core/AssetUrls";
 import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode, maps } from "../core/game/Game";
+import { isTspMap, tspMapFileUrl } from "../core/game/TspMaps";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 
@@ -198,11 +199,13 @@ export async function buildPreview(
     ? mapId.toLowerCase().replace(/[\s.()]+/g, "")
     : null;
 
-  const mapThumbnail = normalizedMap
-    ? buildAbsoluteAssetUrl(
-        `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
-      )
-    : null;
+  const mapThumbnail = isTspMap(map)
+    ? new URL(tspMapFileUrl(map as string, "thumbnail.webp"), origin).toString()
+    : normalizedMap
+      ? buildAbsoluteAssetUrl(
+          `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+        )
+      : null;
   const image =
     mapThumbnail ?? buildAbsoluteAssetUrl("images/GameplayScreenshot.png");
 

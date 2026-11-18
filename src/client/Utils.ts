@@ -11,6 +11,7 @@ import {
   Team,
   Trios,
 } from "../core/game/Game";
+import { isTspMap, tspMapName } from "../core/game/TspMaps";
 import { GameConfig } from "../core/Schemas";
 import { stripVersionPrefix } from "../core/ServerList";
 import { ClientEnv } from "./ClientEnv";
@@ -54,6 +55,7 @@ export function presenceMapKey(
 
 export function getMapName(mapName: string | undefined): string | null {
   if (!mapName) return null;
+  if (isTspMap(mapName)) return tspMapName(mapName);
   const translationKey =
     maps.find((m) => m.type === mapName)?.translationKey ??
     `map.${normaliseMapKey(mapName)}`;

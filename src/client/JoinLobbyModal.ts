@@ -22,6 +22,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import { isTspMap, tspMapFileUrl } from "../core/game/TspMaps";
 import { UserSettings } from "../core/game/UserSettings";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -509,9 +510,11 @@ export class JoinLobbyModal extends BaseModal {
     const c = lobby.gameConfig;
     const mapName = c ? (getMapName(c.gameMap) ?? c.gameMap) : "";
     const thumbnailUrl = c
-      ? assetUrl(
-          `maps/${encodeURIComponent(normaliseMapKey(c.gameMap))}/thumbnail.webp`,
-        )
+      ? isTspMap(c.gameMap)
+        ? tspMapFileUrl(c.gameMap, "thumbnail.webp")
+        : assetUrl(
+            `maps/${encodeURIComponent(normaliseMapKey(c.gameMap))}/thumbnail.webp`,
+          )
       : "";
     // Nation count for this map isn't loaded pre-join, so the numeric-nations
     // default comparison is skipped in the row chips.
@@ -913,9 +916,9 @@ export class JoinLobbyModal extends BaseModal {
     const c = this.gameConfig;
     const mapName = getMapName(c.gameMap);
     const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = assetUrl(
-      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
-    );
+    const thumbnailUrl = isTspMap(c.gameMap)
+      ? tspMapFileUrl(c.gameMap, "thumbnail.webp")
+      : assetUrl(`maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`);
     const modeSubtitle = this.modeSubtitle(c);
 
     const cards = notableLobbySettings(c, this.nationCount).map(

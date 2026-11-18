@@ -419,6 +419,97 @@ async function gallerySkins() {
   }
   return galleryCache.items;
 }
+// TeamStats maps (Bembe 2026-11-18): public maps of the teamstats.pro Map Gallery for the map picker
+// (src/core/game/TspMaps.ts). The list is kept 2 minutes. The map files of one version
+// (/api/play/maps/<id>/<v>/<file>, built by the site from the gallery) never change, so the front
+// fetches each one once and keeps it in TSP_MAPS_DIR (default next to the game records, on the
+// /data volume on Railway): games and replays keep working after the creator edits or hides the map.
+const TSP_MAP_FILES = new Set([
+  "manifest.json",
+  "map.bin",
+  "map4x.bin",
+  "map16x.bin",
+  "thumbnail.webp",
+]);
+const TSP_MAPS_DIR = (() => {
+  const v = String(process.env.TSP_MAPS_DIR || "").trim();
+  if (v) return v;
+  return fs.existsSync("/data")
+    ? "/data/tsp-maps"
+    : path.join(__dirname, "..", "data", "tsp-maps");
+})();
+let tspMapsCache = { at: 0, items: [] };
+async function tspMapList() {
+  if (Date.now() - tspMapsCache.at < 2 * 60 * 1000) return tspMapsCache.items;
+  if (GALLERY_SITE === "off" || !GALLERY_SITE) return [];
+  try {
+    const r = await fetch(`${GALLERY_SITE}/api/play/maps`, {
+      headers: { "User-Agent": GAME_UA },
+      signal: AbortSignal.timeout(6000),
+    });
+    const d = r.ok ? await r.json() : { items: [] };
+    const items = (d.items || [])
+      .filter(
+        (m) =>
+          /^[A-Za-z0-9_-]{4,20}$/.test(String(m.id)) &&
+          Number.isInteger(m.v) &&
+          m.v >= 0,
+      )
+      .map((m) => ({
+        id: m.id,
+        v: m.v,
+        name: short(m.name || "Map", 60),
+        description: short(m.description || "", 300),
+        owner: short(m.owner || "", 40),
+        type: m.type === "real" ? "real" : "fictional",
+        w: Number(m.w) || 0,
+        h: Number(m.h) || 0,
+        nations: Number(m.nations) || 0,
+        rating: Number(m.rating) || 0,
+        ratings: Number(m.ratings) || 0,
+      }));
+    tspMapsCache = { at: Date.now(), items };
+  } catch (e) {
+    console.error("Cannot load the map gallery:", e.message);
+    tspMapsCache.at = Date.now() - 90 * 1000;
+  }
+  return tspMapsCache.items;
+}
+const tspMapFetches = new Map(); // "<id>/<v>/<file>" -> Promise<Buffer>
+async function tspMapFile(id, v, file) {
+  const key = `${id}/${v}/${file}`;
+  const local = path.join(TSP_MAPS_DIR, `${id}.${v}`, file);
+  try {
+    return await fs.promises.readFile(local);
+  } catch {}
+  if (GALLERY_SITE === "off" || !GALLERY_SITE) return null;
+  if (!tspMapFetches.has(key)) {
+    const p = (async () => {
+      // the first request of a map version makes the site build it: allow some time
+      const r = await fetch(`${GALLERY_SITE}/api/play/maps/${key}`, {
+        headers: { "User-Agent": GAME_UA },
+        signal: AbortSignal.timeout(file === "thumbnail.webp" ? 10000 : 90000),
+      });
+      if (!r.ok) return null;
+      const buf = Buffer.from(await r.arrayBuffer());
+      try {
+        fs.mkdirSync(path.dirname(local), { recursive: true });
+        fs.writeFileSync(local + ".tmp", buf);
+        fs.renameSync(local + ".tmp", local);
+      } catch (e) {
+        console.error("Cannot keep TeamStats map file", key, e.message);
+      }
+      return buf;
+    })().finally(() => tspMapFetches.delete(key));
+    tspMapFetches.set(key, p);
+  }
+  try {
+    return await tspMapFetches.get(key);
+  } catch (e) {
+    console.error("Cannot fetch TeamStats map file", key, e.message);
+    return null;
+  }
+}
 // Finished games, whole (turns too), for "Last games" and replays (Bembe 2026-11-18). The workers hand
 // each record to /internal/game-record; it is kept gzipped as <dir>/<gameID>.json.gz and listed in
 // <dir>/index.json (newest first, MAX_GAME_RECORDS kept, the oldest files are deleted). On Railway the
@@ -692,6 +783,40 @@ const server = http.createServer(async (req, res) => {
       Location: "/",
     });
     return res.end();
+  }
+  // TeamStats maps for the map picker (TspMaps.ts): the list, then the files of one map version.
+  if (u.pathname === "/api/tsp/maps" && req.method === "GET") {
+    const site = GALLERY_SITE && GALLERY_SITE !== "off" ? GALLERY_SITE : null;
+    return sendJson(res, 200, {
+      items: await tspMapList(),
+      gallery: site ? `${site}/map-gallery.html` : null,
+      creator: site ? `${site}/map-creator.html` : null,
+    });
+  }
+  {
+    const m = u.pathname.match(
+      /^\/api\/tsp\/maps\/([A-Za-z0-9_-]{4,20})\/(\d{1,9})\/([a-z0-9.]+)$/,
+    );
+    if (m && req.method === "GET") {
+      if (!TSP_MAP_FILES.has(m[3]))
+        return sendJson(res, 404, { error: "Not found" });
+      const buf = await tspMapFile(m[1], m[2], m[3]);
+      if (!buf)
+        return sendJson(res, 404, { error: "This map is not available." });
+      const type = m[3].endsWith(".json")
+        ? "application/json"
+        : m[3].endsWith(".bin")
+          ? "application/octet-stream"
+          : buf.length >= 4 && buf.readUInt32BE(0) === 0x89504e47
+            ? "image/png"
+            : "image/webp";
+      res.writeHead(200, {
+        "Content-Type": type,
+        "Content-Length": buf.length,
+        "Cache-Control": "public, max-age=31536000, immutable",
+      });
+      return res.end(buf);
+    }
   }
   // Public patterns of the teamstats.pro Skin Gallery for the picker in "Your Profile" (TspPattern.ts).
   if (u.pathname === "/api/tsp/skins" && req.method === "GET") {
