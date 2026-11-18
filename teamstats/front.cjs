@@ -678,7 +678,7 @@ input:focus{outline:none;border-color:#57e6ff}button{padding:12px 16px;border:0;
 .host:hover{background:rgba(87,230,255,.16)}</style></head><body><div class="c">
 <h1>TEAMSTATS<b>.PRO</b></h1><p>Paste the invite link (or the lobby code) you got from the host. A link ending in <b>/streamer-mode</b> has no code: ask the host to use <b>Copy invite link</b>.</p>
 <form id="f"><input id="i" placeholder="https://…/game/AbCd1234 or AbCd1234" autofocus><button>Join</button></form><div class="e" id="e"></div>
-${ticketsOn ? `<a class="host" href="${PLAY_SITE}/play">Host your own lobby: log in with Discord</a>` : ""}
+${ticketsOn ? `<a class="host" href="${PLAY_SITE}/play?login=1">Host your own lobby: log in with Discord</a>` : ""}
 <p style="margin:18px 0 0;font-size:12px">© OpenFront and Contributors · <a href="https://github.com/Bembe-tech/teamstats-game" style="color:#6ea8ff">Source code (AGPL-3.0)</a></p></div>
 <script>document.getElementById("f").onsubmit=function(ev){ev.preventDefault();var v=document.getElementById("i").value.trim();
 var m=/(?:game[/])?([A-Za-z0-9]{8,12})(?:[?#/].*)?$/.exec(v);if(!m){document.getElementById("e").textContent="That does not look like a lobby link or code.";return;}
@@ -773,7 +773,8 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === "/login" && ticketsOn) {
     const next = safeNext(u.searchParams.get("next"));
     res.writeHead(302, {
-      Location: `${PLAY_SITE}/play${next !== "/" ? "?next=" + encodeURIComponent(next) : ""}`,
+      // login=1: the site's /play sends guests without it straight back to the game (no login wall)
+      Location: `${PLAY_SITE}/play?login=1${next !== "/" ? "&next=" + encodeURIComponent(next) : ""}`,
     });
     return res.end();
   }
@@ -1031,7 +1032,7 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
     if (ticketsOn) {
-      res.writeHead(302, { Location: `${PLAY_SITE}/play` });
+      res.writeHead(302, { Location: `${PLAY_SITE}/play?login=1` });
       return res.end();
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
