@@ -1,8 +1,8 @@
 // TeamStats.Pro game: one public port in front of OpenFront's master (3000) and worker (3001),
 // doing what nginx.conf does on OpenFront's own servers: /wN/... goes to worker N (path without
 // the /wN prefix), /api/create_game to a worker, everything else to the master. WebSockets too.
-// Also the gate: without the access cookie only /join/<id> links (and what the game loads) work;
-// /?key=<ACCESS_KEY> sets the cookie and opens the host panel.
+// Also the gate: without the access cookie or a Discord login nobody can create a lobby (guests get the
+// home page, join links and public lobbies); /?key=<ACCESS_KEY> sets the cookie and opens the host panel.
 // Everyone logged in with Discord on teamstats.pro may host too: the site's /play hands over a short-lived
 // ticket signed with the site's own Ed25519 key, checked here with the public half from
 // PLAY_SITE/api/play/pubkey (no shared secret to set), and /?ticket=<ticket> turns it into a signed
@@ -39,6 +39,10 @@ const cookieValue = ACCESS_KEY
       .slice(0, 32)
   : "";
 const ticketsOn = PLAY_SITE !== "" && PLAY_SITE !== "off";
+// Bembe 2026-11-18: the game is open to everyone, a Discord login is not needed to play or to host.
+// Guests are limited per IP (one open lobby, LOBBIES_PER_HOUR); GUEST_HOSTS=off brings the old
+// rule back (only key holders and Discord logins create lobbies, guests only join).
+const guestHosts = String(process.env.GUEST_HOSTS || "on").trim() !== "off";
 // Signs the player cookie: stable across restarts when ACCESS_KEY is set, otherwise new per start
 // (hosts then just open /play again).
 const COOKIE_KEY = ACCESS_KEY
@@ -158,16 +162,21 @@ function userCookie(who) {
 }
 const hasKey = (req) => !!ACCESS_KEY && cookies(req)[COOKIE] === cookieValue;
 function hasAccess(req) {
-  if (!ACCESS_KEY && !ticketsOn) return true;
+  if (guestHosts || (!ACCESS_KEY && !ticketsOn)) return true;
   return hasKey(req) || !!userId(req);
 }
-// The host panel (the page itself at "/") needs the key; join links, the game's files and the
-// game sockets are open, so invited players get in with just the link.
+// Who owns a lobby for the limits: the Discord id, or "guest:<ip>" for a guest.
+const hostId = (req) =>
+  userId(req) || (guestHosts ? "guest:" + clientIp(req) : "");
+// Making a lobby needs the key or a Discord login. The home page itself is open (Bembe 2026-11-18:
+// guests without Discord could not get into the game at all): guests see Join, the public lobbies
+// and "Host a lobby" (-> log in), but no Create Lobby (GameModeSelector.ts reads tsp_host_ui).
+// Join links, the game's files and the game sockets are open too.
 function isHostOnly(req) {
   const p = req.url.split("?")[0];
   // /streamer-mode is the host's address bar in streamer mode (code hidden):
   // a guest who got it pastes the real invite link instead
-  if (p === "/" || p === "/index.html" || p === "/streamer-mode") return true;
+  if (p === "/streamer-mode") return true;
   return /^\/api\/create_game$/.test(p) || /^\/w\d+\/api\/create_game/.test(p);
 }
 
@@ -459,7 +468,7 @@ const sendJson = (res, code, v) => {
 const safeNext = (n) =>
   /^\/game\/[A-Za-z0-9]{4,16}$/.test(String(n || "")) ? n : "/";
 
-// Shown on "/" without the host key: players paste their invite link or code.
+// Shown to guests on host-only addresses (/streamer-mode, /host without tickets): paste the invite link or code.
 const INVITE_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TeamStats.Pro</title><style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px Inter,system-ui,sans-serif;color:#edf2f7;
@@ -587,7 +596,7 @@ const server = http.createServer(async (req, res) => {
   // "Public game" switch of a host: { gameID, public }.
   if (u.pathname === "/api/tsp/public" && req.method === "POST") {
     const me = siteUser(req);
-    const uid = String(me?.id || "");
+    const uid = hostId(req);
     const key = hasKey(req);
     if (!uid && !key)
       return sendJson(res, 401, {
@@ -627,7 +636,7 @@ const server = http.createServer(async (req, res) => {
       gameID,
       port,
       owner: uid || "key",
-      host: short(me?.name || "Host", 20),
+      host: short(me?.name || (uid.startsWith("guest:") ? "Guest" : "Host"), 20),
       avatar: me?.avatar || "",
       at: publicLobbies.get(gameID)?.at || Date.now(),
     });
@@ -720,13 +729,31 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(302, { "Set-Cookie": HOST_UI_COOKIE, Location: req.url });
     return res.end();
   }
+  // A guest whose login ran out still has the hint cookie: take it away, so the page shows
+  // "Host a lobby" (log in) instead of a Create Lobby that the server refuses.
+  if (
+    (u.pathname === "/" || u.pathname === "/index.html") &&
+    !hasAccess(req) &&
+    cookies(req).tsp_host_ui === "1"
+  ) {
+    res.writeHead(302, {
+      "Set-Cookie": "tsp_host_ui=; Path=/; SameSite=Lax; Max-Age=0",
+      Location: req.url,
+    });
+    return res.end();
+  }
   if (isHostOnly(req) && !hasAccess(req)) {
-    if (/create_game/.test(req.url))
+    if (/create_game/.test(u.pathname)) {
       console.log(
         new Date().toISOString(),
         "create_game refused: no host key or Discord login",
         req.socket.remoteAddress,
       );
+      return sendJson(res, 403, {
+        error: "Log in with Discord to create a lobby.",
+        login: ticketsOn ? "/login" : null,
+      });
+    }
     res.writeHead(403, { "Content-Type": "text/html; charset=utf-8" });
     return res.end(INVITE_PAGE);
   }
@@ -737,7 +764,7 @@ const server = http.createServer(async (req, res) => {
     req.method === "POST" &&
     /^\/(w\d+\/)?api\/create_game$/.test(u.pathname) &&
     !hasKey(req)
-      ? userId(req)
+      ? hostId(req)
       : "";
   if (!uid) return proxy(req, res, t);
   // A successor of a finished game (?previous=) takes its place, so it is never blocked.
