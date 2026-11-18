@@ -42,6 +42,9 @@ const cookieValue = ACCESS_KEY
       .slice(0, 32)
   : "";
 const ticketsOn = PLAY_SITE !== "" && PLAY_SITE !== "off";
+// The site's admin Traffic card (tab "TeamStats Game"): the page beats there from the player's browser
+// (src/client/TspBeat.ts), finished games are reported by this front (/internal/game-record).
+const BEAT_URL = ticketsOn ? `${PLAY_SITE}/api/play/beat?p=tsgame` : null;
 // Bembe 2026-11-18: the game is open to everyone, a Discord login is not needed to play or to host.
 // Guests are limited per IP (one open lobby, LOBBIES_PER_HOUR); GUEST_HOSTS=off brings the old
 // rule back (only key holders and Discord logins create lobbies, guests only join).
@@ -656,11 +659,14 @@ const server = http.createServer(async (req, res) => {
             avatar: me.avatar || "",
             profile: `${PLAY_SITE}/play-profile.html?u=${encodeURIComponent(me.id)}`,
             site: GALLERY_SITE,
+            beat: BEAT_URL,
           }
         : {
             loggedIn: false,
             login: ticketsOn ? "/login" : null,
             site: GALLERY_SITE,
+            beat: BEAT_URL,
+            beat: BEAT_URL,
           },
     );
   }
@@ -779,6 +785,14 @@ const server = http.createServer(async (req, res) => {
     const rec = await readJson(req, 64 * 1024 * 1024);
     if (!rec || !rec.info || !rec.info.gameID)
       return sendJson(res, 400, { error: "bad record" });
+    if (ticketsOn)
+      siteCall("/api/play/game-stat", {
+        gameID: String(rec.info.gameID),
+        players: (rec.info.players || []).length,
+      }).then((r) => {
+        if (r.status !== 200)
+          console.error("Traffic game stat refused:", r.status, r.body?.error);
+      });
     try {
       return sendJson(res, 200, { ok: await storeRecord(rec) });
     } catch (e) {

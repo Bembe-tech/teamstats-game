@@ -62,6 +62,7 @@ import {
 } from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
+import "./TspBeat";
 import {
   GameModeSelector,
   joinIsGateable,
