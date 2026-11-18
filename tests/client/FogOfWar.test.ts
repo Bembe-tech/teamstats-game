@@ -13,6 +13,7 @@ function view(spawnPhase: boolean) {
     smallID: () => ME,
     isAlive: () => true,
     isFriendly: (p: { smallID(): number }) => p.smallID() === ALLY,
+    incomingAttacks: () => [],
   };
   const ally = { smallID: () => ALLY };
   const enemy = { smallID: () => ENEMY };

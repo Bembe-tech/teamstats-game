@@ -14,6 +14,9 @@
 //     covers everything outside vision.
 //   - spawn phase: other players are hidden everywhere (no dark overlay,
 //     the map stays readable for picking a spot);
+//   - a player attacking you (land attack on you right now) shows only
+//     their troop count in the HUD (hover box, player panel, attacks list);
+//     gold, buildings and their land stay hidden;
 //   - the player's OWN nukes (not allies') light up the sky around them in
 //     flight, and the blast area stays visible for a few seconds after the
 //     detonation, then goes back under the fog.
@@ -83,6 +86,8 @@ export class FogOfWar {
   private readonly fogRail: Uint8Array;
   private railChanged = false;
   private readonly friendly = new Uint8Array(OWNER_MASK + 1);
+  // Players with an attack on the local player right now (troops shown)
+  private readonly attackers = new Uint8Array(OWNER_MASK + 1);
   private initialized = false;
   private mySmallID = 0;
   private spawnPhase = false;
@@ -136,6 +141,16 @@ export class FogOfWar {
    */
   hidesStatsOf(smallID: number): boolean {
     return this.wasActive && this.friendly[smallID & OWNER_MASK] !== 1;
+  }
+
+  /**
+   * True when the HUD may show this player's troop count: no fog, a friend,
+   * or a player whose attack on you is going on right now.
+   */
+  showsTroopsOf(smallID: number): boolean {
+    return (
+      !this.hidesStatsOf(smallID) || this.attackers[smallID & OWNER_MASK] === 1
+    );
   }
 
   /** True while the fog is shown (drawOverlay draws only then). */
@@ -368,8 +383,12 @@ export class FogOfWar {
 
   private updateFriendly(gameView: GameView): void {
     this.friendly.fill(0);
+    this.attackers.fill(0);
     const me = gameView.myPlayer();
     if (me === null) return;
+    for (const a of me.incomingAttacks()) {
+      this.attackers[a.attackerID & OWNER_MASK] = 1;
+    }
     this.mySmallID = me.smallID();
     this.friendly[me.smallID()] = 1;
     for (const p of gameView.playerViews()) {

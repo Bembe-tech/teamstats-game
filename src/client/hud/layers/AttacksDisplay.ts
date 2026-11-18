@@ -9,6 +9,7 @@ import {
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { Controller } from "../../Controller";
+import { FogOfWar } from "../../FogOfWar";
 import { themeProvider } from "../../theme/ThemeProvider";
 import {
   GoToPlayerEvent,
@@ -208,6 +209,20 @@ export class AttacksDisplay extends LitElement implements Controller {
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
+  // TeamStats.Pro Fog of War: the attacker's whole army, hidden by the fog
+  // otherwise, is shown while their attack on you goes on.
+  private renderAttackerArmy(attack: AttackUpdate) {
+    const fog = FogOfWar.current;
+    if (!fog?.active() || !fog.hidesStatsOf(attack.attackerID)) return "";
+    const attacker = this.game.playerBySmallID(attack.attackerID);
+    if (!(attacker instanceof PlayerView)) return "";
+    return html`<span
+      class="shrink-0 ml-1 text-xs text-red-300/80"
+      title="Attacker's troops"
+      >(🛡️${renderTroops(attacker.troops())})</span
+    >`;
+  }
+
   private renderIncomingAttacks() {
     if (this.incomingAttacks.length === 0) return html``;
 
@@ -229,6 +244,7 @@ export class AttacksDisplay extends LitElement implements Controller {
                   this.game.playerBySmallID(attack.attackerID) as PlayerView
                 )?.displayName()}</span
               >
+              ${this.renderAttackerArmy(attack)}
               ${attack.retreating
                 ? `(${translateText("events_display.retreating")}...)`
                 : ""} `,

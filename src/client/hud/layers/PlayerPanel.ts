@@ -627,8 +627,27 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderResources(other: PlayerView) {
-    // TeamStats.Pro Fog of War: other players' numbers stay hidden
-    if (FogOfWar.current?.hidesStatsOf(other.smallID())) return html``;
+    // TeamStats.Pro Fog of War: other players' numbers stay hidden,
+    // except the troops of a player attacking you right now
+    if (FogOfWar.current?.hidesStatsOf(other.smallID())) {
+      if (!FogOfWar.current.showsTroopsOf(other.smallID())) return html``;
+      return html`
+        <div class="mb-1 flex justify-between gap-2">
+          <div
+            class="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 px-3 py-1.5
+                    text-white w-35 shrink-0"
+          >
+            <span class="mr-0.5">🛡️</span>
+            <span translate="no" class="tabular-nums w-[5ch] font-semibold">
+              ${renderTroops(other.troops() || 0)}
+            </span>
+            <span class="text-zinc-200 whitespace-nowrap">
+              ${translateText("player_panel.troops")}</span
+            >
+          </div>
+        </div>
+      `;
+    }
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div

@@ -362,6 +362,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         <div class="font-bold text-sm lg:text-lg text-white">
           ${player.displayName()}
         </div>
+        ${FogOfWar.current.showsTroopsOf(player.smallID())
+          ? html`<div class="text-sm text-red-400">
+              Attacking you · ${renderTroops(player.troops())} troops
+            </div>`
+          : ""}
         <div class="text-xs text-white/60">Stats hidden by Fog of War</div>
       </div>`;
     }
