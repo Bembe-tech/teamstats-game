@@ -408,6 +408,7 @@ async function gallerySkins() {
           : "#000000",
         owner: short(s.owner?.name || "", 40),
         rating: Number(s.rating) || 0,
+        ratings: Number(s.ratings) || 0,
         created: short(s.createdAt || "", 30),
       }))
       .sort((a, b) => b.rating - a.rating);
@@ -695,6 +696,49 @@ const server = http.createServer(async (req, res) => {
   // Public patterns of the teamstats.pro Skin Gallery for the picker in "Your Profile" (TspPattern.ts).
   if (u.pathname === "/api/tsp/skins" && req.method === "GET") {
     return sendJson(res, 200, { items: await gallerySkins() });
+  }
+  // Star ratings of the Skin Gallery from inside the game (TspProfile.ts, Bembe 2026-11-18). Same rule as
+  // skin-gallery.html: only players logged in with teamstats.pro (Discord) rate; guests get the login link.
+  // GET: this account's own stars and own skins. POST { skin, stars }: rate (0 takes the rating back).
+  // The front signs the request naming the account from its signed cookie (siteCall), like the settings.
+  if (u.pathname === "/api/tsp/skin-rate") {
+    const uid = userId(req);
+    if (!uid || !ticketsOn)
+      return sendJson(res, req.method === "GET" ? 200 : 401, {
+        loggedIn: false,
+        login: ticketsOn ? "/login" : null,
+        error: "Log in with Discord to rate skins.",
+      });
+    if (req.method === "GET") {
+      const r = await siteCall("/api/play/skin-rate", { op: "get", user: uid });
+      return sendJson(res, r.status, { loggedIn: true, ...r.body });
+    }
+    if (req.method !== "POST")
+      return sendJson(res, 405, { error: "GET or POST" });
+    const b = await readJson(req, 2000);
+    const skin = String(b?.skin || "");
+    const stars = Number(b?.stars);
+    if (
+      !/^[A-Za-z0-9_-]{4,20}$/.test(skin) ||
+      !Number.isInteger(stars) ||
+      stars < 0 ||
+      stars > 5
+    )
+      return sendJson(res, 400, { error: "Rate with 1 to 5 stars." });
+    const r = await siteCall("/api/play/skin-rate", {
+      op: "rate",
+      user: uid,
+      skin,
+      stars,
+    });
+    // the new average shows at once for everyone (the list is cached 10 minutes)
+    const it = r.status === 200 && r.body?.item;
+    const c = it && galleryCache.items.find((x) => x.id === it.id);
+    if (c) {
+      c.rating = Number(it.rating) || 0;
+      c.ratings = Number(it.ratings) || 0;
+    }
+    return sendJson(res, r.status, r.body);
   }
   // The home page's list of public lobbies (polled every few seconds by TspPublicLobbies.ts).
   if (u.pathname === "/api/tsp/public-lobbies" && req.method === "GET") {

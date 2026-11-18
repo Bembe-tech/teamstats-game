@@ -12,6 +12,7 @@ export interface TspGallerySkin {
   secondary: string;
   owner: string;
   rating: number;
+  ratings?: number; // how many accounts rated it
   created?: string;
 }
 

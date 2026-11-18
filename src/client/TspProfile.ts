@@ -242,9 +242,143 @@ export class TspProfileButton extends LitElement {
   @state() private skinModal = false;
   @state() private preview: TspGallerySkin | null = null;
 
+  // Star ratings (front.cjs /api/tsp/skin-rate -> teamstats.pro): only logged-in players rate, like the
+  // gallery on the site. mine = this account's stars by skin id, own = its own skins (no rating those).
+  @state() private rates: {
+    loggedIn: boolean;
+    login?: string | null;
+    mine: Record<string, number>;
+    own: string[];
+  } | null = null;
+  @state() private hoverStars = 0;
+  @state() private rateNote = "";
+  @state() private rateBusy = false;
+
   private loadSkins() {
     if (this.skins === null)
       void tspGallerySkins().then((s) => (this.skins = s));
+    if (this.rates === null || !this.rates.loggedIn) void this.loadRates();
+  }
+  private async loadRates() {
+    try {
+      const r = await fetch("/api/tsp/skin-rate", {
+        credentials: "same-origin",
+      });
+      const d = await r.json();
+      this.rates = {
+        loggedIn: !!d.loggedIn,
+        login: d.login ?? null,
+        mine: d.loggedIn && d.mine ? d.mine : {},
+        own: d.loggedIn && Array.isArray(d.own) ? d.own : [],
+      };
+    } catch {
+      this.rates = { loggedIn: false, login: null, mine: {}, own: [] };
+    }
+  }
+  private async rateSkin(s: TspGallerySkin, stars: number) {
+    if (!this.rates?.loggedIn || this.rateBusy) return;
+    if ((this.rates.mine[s.id] ?? 0) === stars) stars = 0; // same star again takes the rating back
+    this.rateBusy = true;
+    this.rateNote = "";
+    try {
+      const r = await fetch("/api/tsp/skin-rate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skin: s.id, stars }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.item)
+        throw new Error(d.error || "Could not save the rating.");
+      // the same object sits in this.skins and this.preview
+      s.rating = Number(d.item.rating) || 0;
+      s.ratings = Number(d.item.ratings) || 0;
+      const mine = { ...this.rates.mine };
+      if (d.item.myRating) mine[s.id] = d.item.myRating;
+      else delete mine[s.id];
+      this.rates = { ...this.rates, mine };
+      this.skins = this.skins ? [...this.skins] : this.skins;
+      this.rateNote = stars
+        ? "Thanks! Your rating is saved."
+        : "Rating removed.";
+    } catch (e) {
+      this.rateNote = (e as Error).message;
+    }
+    this.rateBusy = false;
+  }
+  private rateBox(p: TspGallerySkin, site: string) {
+    const r = this.rates;
+    const own = !!r?.own.includes(p.id);
+    const mine = r?.mine[p.id] ?? 0;
+    const shown = this.hoverStars || mine;
+    const avg = p.rating
+      ? html`<b style="color:#ffd166">★ ${p.rating.toFixed(1)}</b>
+          <span style="color:#8f9bab"
+            >(${p.ratings ?? 0} rating${p.ratings === 1 ? "" : "s"})</span
+          >`
+      : html`<span style="color:#8f9bab">No ratings yet</span>`;
+    let body;
+    if (r === null) body = html`<div style=${S.muted}>Loading…</div>`;
+    else if (!r.loggedIn)
+      body = html`<div style=${S.muted + ";margin-bottom:6px"}>
+          Log in with Discord to rate skins.
+        </div>
+        ${r.login
+          ? html`<a
+              href=${r.login}
+              style=${S.btn + ";display:block;text-align:center"}
+              >Log in to rate</a
+            >`
+          : nothing}`;
+    else if (own)
+      body = html`<div style=${S.muted}>
+        This is your skin. Others rate it.
+      </div>`;
+    else
+      body = html`<div
+          style="display:flex;gap:2px"
+          @mouseleave=${() => (this.hoverStars = 0)}
+          role="radiogroup"
+          aria-label="Your rating"
+        >
+          ${[1, 2, 3, 4, 5].map(
+            (n) =>
+              html`<button
+                title=${mine === n
+                  ? "Click again to remove your rating"
+                  : n + " star" + (n > 1 ? "s" : "")}
+                aria-label=${n + " star" + (n > 1 ? "s" : "")}
+                aria-checked=${mine === n ? "true" : "false"}
+                role="radio"
+                ?disabled=${this.rateBusy}
+                @mouseenter=${() => (this.hoverStars = n)}
+                @click=${() => this.rateSkin(p, n)}
+                style="background:none;border:0;padding:0 2px;cursor:pointer;font-size:26px;line-height:1;color:${n <=
+                shown
+                  ? "#ffd166"
+                  : "#3a4558"}"
+              >
+                ★
+              </button>`,
+          )}
+        </div>
+        <div style=${S.muted + ";font-size:12px"}>
+          ${this.rateNote ||
+          (mine ? "Your rating: " + mine + " ★" : "Click a star to rate.")}
+        </div>`;
+    return html`<div
+      style="margin:10px 0;padding:10px 12px;border-radius:12px;border:1px solid #1f2938;background:#0a0f18"
+    >
+      <div style="font-size:13px;margin-bottom:6px">${avg}</div>
+      ${body}
+      <a
+        href=${site + "/skin-gallery.html"}
+        target="_blank"
+        rel="noopener"
+        style="display:block;margin-top:8px;color:#6ea8ff;font-size:12.5px"
+        >Comments in the gallery on teamstats.pro ↗</a
+      >
+    </div>`;
   }
   private currentSkin(): TspGallerySkin | null {
     return this.skins?.find((s) => s.pattern === this.pickedPattern) ?? null;
@@ -325,7 +459,11 @@ export class TspProfileButton extends LitElement {
       (s?.pattern ?? null) === this.pickedPattern;
     const card = (s: TspGallerySkin) =>
       html`<button
-        @click=${() => (this.preview = s)}
+        @click=${() => {
+          this.preview = s;
+          this.rateNote = "";
+          this.hoverStars = 0;
+        }}
         @dblclick=${() => this.pickPattern(s.pattern)}
         title=${s.name + (s.owner ? " by " + s.owner : "")}
         style="text-align:left;padding:8px;border-radius:14px;cursor:pointer;background:#0d1320;border:2px solid ${p?.pattern ===
@@ -442,11 +580,7 @@ export class TspProfileButton extends LitElement {
                   <div style="font-weight:900;font-size:17px;margin-top:10px">
                     ${p.name}
                   </div>
-                  <div style=${S.muted}>
-                    ${p.owner ? "by " + p.owner : ""}${p.rating
-                      ? " · ★ " + p.rating.toFixed(1)
-                      : ""}
-                  </div>
+                  <div style=${S.muted}>${p.owner ? "by " + p.owner : ""}</div>
                   <div style="display:flex;gap:6px;margin:10px 0">
                     <span
                       title="Territory colour"
@@ -467,13 +601,7 @@ export class TspProfileButton extends LitElement {
                       >
                         Use this skin
                       </button>`}
-                  <a
-                    href=${site + "/skin-gallery.html"}
-                    target="_blank"
-                    rel="noopener"
-                    style="display:block;margin-top:8px;color:#6ea8ff;font-size:12.5px"
-                    >Rate and comment in the gallery on teamstats.pro ↗</a
-                  >`
+                  ${this.rateBox(p, site)}`
               : html`<div style=${S.muted}>
                   Click a skin to see it here. Double-click to wear it at once.
                 </div>`}
