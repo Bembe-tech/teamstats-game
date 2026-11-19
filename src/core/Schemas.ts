@@ -55,7 +55,8 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | TimeEchoIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -595,6 +596,8 @@ export const GameConfigSchema = z.object({
   waterNukes: z.boolean().nullable().optional(),
   // TeamStats.Pro: each player sees only around their own (and allies') land and units
   fogOfWar: z.boolean().nullable().optional(),
+  // TeamStats.Pro "OpenFront 4D": past view + forecast (client) and Time Echo (time_echo intent)
+  timeWarp: z.boolean().nullable().optional(),
   // TeamStats.Pro "Select Silo mode": numbered silos, choose the launch silo (build_unit.silo)
   selectSilo: z.boolean().nullable().optional(),
   // TeamStats.Pro "Self Economy": no trade with other players (allies too), own ports trade with
@@ -849,6 +852,12 @@ export const ToggleGameStartTimerIntentSchema = z.object({
   type: z.literal("toggle_game_start_timer"),
 });
 
+// TeamStats.Pro "OpenFront 4D": the sender's Time Echo (see game/TimeWarp.ts)
+export const TimeEchoIntentSchema = z.object({
+  type: z.literal("time_echo"),
+});
+export type TimeEchoIntent = z.infer<typeof TimeEchoIntentSchema>;
+
 export const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -875,6 +884,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
+  TimeEchoIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

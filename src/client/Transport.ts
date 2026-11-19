@@ -157,6 +157,9 @@ export class SendEmbargoAllIntentEvent implements GameEvent {
   constructor(public readonly action: "start" | "stop") {}
 }
 
+/** TeamStats.Pro OpenFront 4D: use the Time Echo. */
+export class SendTimeEchoIntentEvent implements GameEvent {}
+
 export class SendDeleteUnitIntentEvent implements GameEvent {
   constructor(public readonly unitId: number) {}
 }
@@ -321,6 +324,9 @@ export class Transport {
     );
     this.subscribe(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
+    this.subscribe(SendTimeEchoIntentEvent, () =>
+      this.sendIntent({ type: "time_echo" }),
+    );
     this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),
     );

@@ -124,6 +124,9 @@ export class PlayerImpl implements Player {
   /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
+  private _echoUses = 0;
+  private _echoReadyTick = 0;
+  private _timeShieldUntil = 0;
   /** Cumulative piracy revenue: payouts for captured trade ships. */
   private _piracyGold: bigint = 0n;
   /** Cumulative gold received from all sources (incremented in addGold). */
@@ -378,6 +381,9 @@ export class PlayerImpl implements Player {
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
+      echoUses: this._echoUses,
+      echoReadyTick: this._echoReadyTick,
+      timeShieldUntil: this._timeShieldUntil,
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
       troops: this.troops(),
@@ -1316,6 +1322,24 @@ export class PlayerImpl implements Player {
 
   addCrownTicks(ticks: number): void {
     this._crownTicks += ticks;
+  }
+
+  echoUses(): number {
+    return this._echoUses;
+  }
+
+  echoReadyTick(): number {
+    return this._echoReadyTick;
+  }
+
+  timeShieldUntil(): number {
+    return this._timeShieldUntil;
+  }
+
+  markEcho(_now: number, readyTick: number, shieldUntil: number): void {
+    this._echoUses++;
+    this._echoReadyTick = readyTick;
+    this._timeShieldUntil = shieldUntil;
   }
 
   piracyGold(): Gold {

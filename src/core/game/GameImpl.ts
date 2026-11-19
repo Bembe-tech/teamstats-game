@@ -49,6 +49,7 @@ import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { ChronoLog } from "./TimeWarp";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { WaterManager } from "./WaterManager";
 
@@ -76,6 +77,8 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  // TeamStats.Pro OpenFront 4D: who took which tile, for the Time Echo
+  private _chronoLog: ChronoLog | null = null;
   private startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
@@ -141,6 +144,7 @@ export class GameImpl implements Game {
       _config.disableNavMesh(),
     );
     this._sharedWaterCache = new SharedWaterCache(this);
+    if (_config.timeWarp()) this._chronoLog = new ChronoLog();
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -470,6 +474,10 @@ export class GameImpl implements Game {
     return this.startTick === null;
   }
 
+  chronoLog(): ChronoLog | null {
+    return this._chronoLog;
+  }
+
   endSpawnPhase(): void {
     if (this.startTick !== null) {
       return;
@@ -767,6 +775,12 @@ export class GameImpl implements Game {
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
+      this._chronoLog?.record(
+        this._ticks,
+        tile,
+        previousOwner.smallID(),
+        owner.smallID(),
+      );
       previousOwner._lastTileChange = this._ticks;
       previousOwner._tileChangeVersion++;
       previousOwner._tiles.delete(tile);

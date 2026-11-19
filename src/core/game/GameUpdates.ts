@@ -249,6 +249,10 @@ export interface PlayerUpdate {
   trainGold?: Gold;
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
+  /** TeamStats.Pro OpenFront 4D: Time Echo state (see game/TimeWarp.ts). */
+  echoUses?: number;
+  echoReadyTick?: number;
+  timeShieldUntil?: number;
   /** Cumulative piracy revenue: captured-ship payouts. */
   piracyGold?: Gold;
   /** Cumulative gold received from all sources (workers, trade, ...). */

@@ -19,6 +19,7 @@ import { getCachedCosmetics } from "./Cosmetics";
 import type { FogOfWar } from "./FogOfWar";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
+import type { TimeWarp } from "./TimeWarp";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
@@ -294,6 +295,8 @@ export class WebGLFrameBuilder {
 
   /** TeamStats.Pro: set by ClientGameRunner when the lobby has Fog of War. */
   fog: FogOfWar | null = null;
+  /** TeamStats.Pro: set by ClientGameRunner when the lobby has OpenFront 4D. */
+  timeWarp: TimeWarp | null = null;
 
   private readonly highlightSetBuf = new Uint8Array(PALETTE_SIZE);
   private glowRescanTick = 0;
@@ -310,9 +313,11 @@ export class WebGLFrameBuilder {
     this.resolveDeadUnitExplosions(gameView);
     const frame = gameView.frameData();
     // TeamStats.Pro: with Fog of War the renderer only gets what the player can see
+    // TeamStats.Pro: OpenFront 4D records what was shown and may show the past
+    const seen = this.fog !== null ? this.fog.filter(gameView, frame) : frame;
     uploadFrameData(
       this.view,
-      this.fog !== null ? this.fog.filter(gameView, frame) : frame,
+      this.timeWarp !== null ? this.timeWarp.filter(gameView, seen) : seen,
     );
   }
 

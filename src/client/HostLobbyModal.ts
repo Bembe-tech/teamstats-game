@@ -103,6 +103,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
   @state() private fogOfWar: boolean = false;
+  @state() private timeWarp: boolean = false;
   @state() private selectSilo: boolean = false;
   @state() private homeEconomy: boolean = false;
   @state() private kingOfTheHill: boolean = false;
@@ -528,6 +529,16 @@ export class HostLobbyModal extends BaseModal {
                 min</label
               >`
             : nothing,
+        )}
+        ${card(
+          this.timeWarp,
+          "⏳",
+          "OpenFront 4D",
+          "Time is the fourth dimension. Look back up to 15 s to see how the map changed, and a forecast shows where boats land and how far attacks get in the next 10 s. Twice per game a Time Echo gives back the land you lost in the last 10 s and freezes attacks on you for 5 s (costs 30% of your gold, at least 100K).",
+          () => {
+            this.timeWarp = !this.timeWarp;
+            this.putGameConfig();
+          },
         )}
         ${card(
           this.selectSilo,
@@ -1367,6 +1378,7 @@ export class HostLobbyModal extends BaseModal {
     this.allowedPublicIds = "";
     this.waterNukes = false;
     this.fogOfWar = false;
+    this.timeWarp = false;
     this.selectSilo = false;
     this.homeEconomy = false;
     this.kingOfTheHill = false;
@@ -1991,6 +2003,7 @@ export class HostLobbyModal extends BaseModal {
         : [],
       waterNukes: this.waterNukes ? true : null,
       fogOfWar: this.fogOfWar ? true : null,
+      timeWarp: this.timeWarp ? true : null,
       selectSilo: this.selectSilo ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,

@@ -85,6 +85,9 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),
     crownTicks: pu.crownTicks ?? 0,
+    echoUses: pu.echoUses ?? 0,
+    echoReadyTick: pu.echoReadyTick ?? 0,
+    timeShieldUntil: pu.timeShieldUntil ?? 0,
     piracyGold: Number(pu.piracyGold ?? 0n),
     goldEarned: Number(pu.goldEarned ?? 0n),
     troops: pu.troops!,
@@ -551,6 +554,19 @@ export class PlayerView {
 
   crownTicks(): number {
     return this.state.crownTicks ?? 0;
+  }
+
+  /** TeamStats.Pro OpenFront 4D: Time Echo state. */
+  echoUses(): number {
+    return this.state.echoUses ?? 0;
+  }
+
+  echoReadyTick(): number {
+    return this.state.echoReadyTick ?? 0;
+  }
+
+  timeShieldUntil(): number {
+    return this.state.timeShieldUntil ?? 0;
   }
 
   /** Cumulative piracy revenue: captured-ship payouts. */

@@ -790,6 +790,8 @@
     "sent_emoji": "Sent {name}: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "time_echo_against": "⌛ {name} used a Time Echo: {tiles} tiles you took are theirs again, your attack is frozen for {seconds} s",
+    "time_echo_used": "⌛ Time Echo: {tiles} tiles of your land are back, attacks on you are frozen for {seconds} s",
     "trade_ship_captured": "Your trade ship was captured by {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
@@ -905,6 +907,7 @@
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
+    "time_warp": "OpenFront 4D",
     "water_nukes": "Water nukes"
   },
   "game_starting_modal": {
@@ -2128,6 +2131,23 @@
       "default": "Default"
     },
     "select_skin": "Skin"
+  },
+  "time_warp": {
+    "echo": "Time Echo",
+    "echo_cooldown": "Ready again in {s} s",
+    "echo_cost": "Costs {gold} gold",
+    "echo_gold": "Needs at least 100K gold",
+    "echo_hint": "Gives back the land you lost in the last {s} s (where the taker still holds it) and freezes land attacks on you for a moment",
+    "echo_none": "No echoes left this game",
+    "echo_too_early": "Available in {s} s",
+    "forecast_hint": "Boats: path, landing spot and time. Attacks: land taken in the next 10 s at the current speed",
+    "forecast_off": "Forecast off",
+    "forecast_on": "Forecast on",
+    "hide": "Hide",
+    "past": "Look back",
+    "past_hint": "Show the map as it was a few seconds ago. The game keeps running.",
+    "past_on": "Past: -{s} s (back to now)",
+    "shield": "Attacks frozen: {s} s"
   },
   "token_login_modal": {
     "success": "Successfully logged in as {email}!",

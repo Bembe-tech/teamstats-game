@@ -12,6 +12,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { echoBlock } from "../game/TimeWarp";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { assertNever, simpleHash } from "../Util";
@@ -22,7 +23,15 @@ import { NationNukeBehavior } from "./nation/NationNukeBehavior";
 import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { SpawnExecution } from "./SpawnExecution";
+import { TimeEchoExecution } from "./TimeEchoExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+
+// TeamStats.Pro OpenFront 4D: a nation echoes once it lost this share of its
+// land within the last NATION_ECHO_LOOKBACK_S seconds (and had at least
+// NATION_ECHO_MIN_LAND tiles before).
+const NATION_ECHO_LOOKBACK_S = 8;
+const NATION_ECHO_LOSS_SHARE = 0.2;
+const NATION_ECHO_MIN_LAND = 400;
 
 export class NationExecution implements Execution {
   private active = true;
@@ -69,6 +78,33 @@ export class NationExecution implements Execution {
     } else {
       this.player = this.mg.player(this.nation.playerInfo.id);
     }
+  }
+
+  // Land samples once a second for the Time Echo decision (oldest first)
+  private readonly landSamples: number[] = [];
+
+  private maybeTimeEcho(ticks: number): void {
+    const p = this.player!;
+    const land = p.numTilesOwned();
+    this.landSamples.push(land);
+    if (this.landSamples.length > NATION_ECHO_LOOKBACK_S + 1) {
+      this.landSamples.shift();
+    }
+    const before = this.landSamples[0];
+    if (before < NATION_ECHO_MIN_LAND) return;
+    if (land > before * (1 - NATION_ECHO_LOSS_SHARE)) return;
+    const block = echoBlock(
+      true,
+      p.isAlive(),
+      this.mg.inSpawnPhase(),
+      Math.floor(this.mg.elapsedGameSeconds() * 10),
+      ticks,
+      { used: p.echoUses(), readyTick: p.echoReadyTick() },
+      p.gold(),
+    );
+    if (block !== "ok") return;
+    this.mg.addExecution(new TimeEchoExecution(p));
+    this.landSamples.length = 0;
   }
 
   private getAttackRate(): number {
@@ -176,6 +212,11 @@ export class NationExecution implements Execution {
       this.initializeBehaviors();
       this.attackBehavior.forceSendAttack(this.mg.terraNullius());
       return;
+    }
+
+    // TeamStats.Pro OpenFront 4D: a nation losing land fast uses its Time Echo
+    if (this.mg.config().timeWarp() && ticks % 10 === this.attackTick % 10) {
+      this.maybeTimeEcho(ticks);
     }
 
     if (ticks % this.attackRate !== this.attackTick) {

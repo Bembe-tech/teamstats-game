@@ -51,6 +51,9 @@ export function diffPlayerUpdate(
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.crownTicks === next.crownTicks &&
+    prev.echoUses === next.echoUses &&
+    prev.echoReadyTick === next.echoReadyTick &&
+    prev.timeShieldUntil === next.timeShieldUntil &&
     prev.piracyGold === next.piracyGold &&
     prev.isTraitor === next.isTraitor &&
     prev.traitorRemainingTicks === next.traitorRemainingTicks &&
@@ -105,6 +108,12 @@ export function diffPlayerUpdate(
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("crownTicks", prev.crownTicks === next.crownTicks);
+  setIfDifferent("echoUses", prev.echoUses === next.echoUses);
+  setIfDifferent("echoReadyTick", prev.echoReadyTick === next.echoReadyTick);
+  setIfDifferent(
+    "timeShieldUntil",
+    prev.timeShieldUntil === next.timeShieldUntil,
+  );
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
   // tilesOwned / gold / troops / goldEarned intentionally absent — see
   // EXCEPTION above (goldEarned churns every tick via worker income).
@@ -183,6 +192,10 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);
   if (pu.crownTicks !== undefined) target.crownTicks = pu.crownTicks;
+  if (pu.echoUses !== undefined) target.echoUses = pu.echoUses;
+  if (pu.echoReadyTick !== undefined) target.echoReadyTick = pu.echoReadyTick;
+  if (pu.timeShieldUntil !== undefined)
+    target.timeShieldUntil = pu.timeShieldUntil;
   if (pu.piracyGold !== undefined) target.piracyGold = Number(pu.piracyGold);
   if (pu.goldEarned !== undefined) target.goldEarned = Number(pu.goldEarned);
   if (pu.troops !== undefined) target.troops = pu.troops;

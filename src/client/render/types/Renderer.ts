@@ -72,6 +72,9 @@ export interface PlayerState {
   trainGold: number;
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
+  echoUses?: number;
+  echoReadyTick?: number;
+  timeShieldUntil?: number;
   /** Cumulative piracy revenue: captured-ship payouts (live). */
   piracyGold: number;
   /** Cumulative gold received from all sources (live). */

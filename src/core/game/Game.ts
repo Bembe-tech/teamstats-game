@@ -14,6 +14,7 @@ import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
+import type { ChronoLog } from "./TimeWarp";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -649,6 +650,12 @@ export interface Player {
   // TeamStats.Pro King of the Hill: ticks spent holding the crown
   crownTicks(): number;
   addCrownTicks(ticks: number): void;
+  // TeamStats.Pro OpenFront 4D: Time Echo uses, next allowed tick, and the
+  // tick until which land attacks on this player are frozen
+  echoUses(): number;
+  echoReadyTick(): number;
+  timeShieldUntil(): number;
+  markEcho(now: number, readyTick: number, shieldUntil: number): void;
 
   // Cumulative piracy revenue (captured trade ships; GOLD_INDEX_STEAL).
   piracyGold(): Gold;
@@ -832,6 +839,8 @@ export interface Game extends GameMap {
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  /** TeamStats.Pro OpenFront 4D: recent conquests (null when the mode is off). */
+  chronoLog(): ChronoLog | null;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;

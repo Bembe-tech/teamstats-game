@@ -42,6 +42,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { TimeWarpPanel } from "./layers/TimeWarpPanel";
 import { TutorialPanel } from "./layers/TutorialPanel";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
@@ -313,6 +314,21 @@ export function createRenderer(
   tutorialPanel.userSettings = userSettings;
   tutorialPanel.uiState = uiState;
 
+  // TeamStats.Pro OpenFront 4D panel (only in 4D lobbies, not for spectators)
+  const timeWarpLayers: Controller[] = [];
+  if (game.config().timeWarp()) {
+    let panel = document.querySelector("time-warp-panel") as TimeWarpPanel;
+    if (!panel) {
+      panel = new TimeWarpPanel();
+      document.body.appendChild(panel);
+    }
+    panel.game = game;
+    panel.eventBus = eventBus;
+    timeWarpLayers.push(panel);
+  } else {
+    document.querySelector("time-warp-panel")?.remove();
+  }
+
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
     new BuildPreviewController(
@@ -363,6 +379,7 @@ export function createRenderer(
     tutorialPanel,
     alertFrame,
     performanceOverlay,
+    ...timeWarpLayers,
   ];
 
   return new GameRenderer(

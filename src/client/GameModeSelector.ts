@@ -722,6 +722,7 @@ export class GameModeSelector extends LitElement {
           <span class="ts-modes-label">Lobby modes</span>
           <span class="ts-chip">Fog of War</span>
           <span class="ts-chip">King of the Hill</span>
+          <span class="ts-chip">OpenFront 4D</span>
           <span class="ts-chip">Select Silo mode</span>
           <span class="ts-chip">Self Economy</span>
           <span class="ts-chip">Manual teams</span>

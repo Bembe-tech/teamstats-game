@@ -107,6 +107,11 @@ export function notableLobbySettings(
       label: translateText("game_settings.fog_of_war"),
       value: enabled,
     });
+  if (c.timeWarp)
+    items.push({
+      label: translateText("game_settings.time_warp"),
+      value: enabled,
+    });
   if (c.selectSilo)
     items.push({
       label: translateText("game_settings.select_silo"),

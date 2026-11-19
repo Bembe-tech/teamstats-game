@@ -76,6 +76,7 @@ describe("createRenderer", () => {
       config: () => ({
         gameConfig: () => ({}),
         isReplay: () => false,
+        timeWarp: () => false,
       }),
     } as unknown as GameView;
     const view = {} as MapRenderer;

@@ -57,6 +57,7 @@ import { versionedPathForMismatchedGame } from "./ServerList";
 import { SiloSelect } from "./SiloSelect";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { TimeWarp } from "./TimeWarp";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
@@ -584,6 +585,11 @@ function mountWebGLFrameLoop(
     ? new FogOfWar(mapWidth, mapHeight)
     : null;
   FogOfWar.current = fog;
+  // TeamStats.Pro: OpenFront 4D (lobby option): past view + forecast
+  const timeWarp = gameView.config().timeWarp()
+    ? new TimeWarp(mapWidth, mapHeight)
+    : null;
+  TimeWarp.current = timeWarp;
   // TeamStats.Pro: Select Silo mode (lobby option): numbered silos
   const siloSelect = gameView.config().selectSilo()
     ? new SiloSelect(gameView, uiState)
@@ -603,6 +609,7 @@ function mountWebGLFrameLoop(
       (cachedCanvasH - mapHeight) / (2 * scale);
     view.setCameraState(centerX, centerY, scale * dpr);
     fog?.drawOverlay(glCanvas, centerX, centerY, scale);
+    timeWarp?.drawOverlay(glCanvas, centerX, centerY, scale);
     siloSelect?.drawOverlay(glCanvas, centerX, centerY, scale);
     // Invoke the WebGL renderer's frame callback synchronously, with the just-
     // updated camera state. The callback re-arms itself via captureRaf, so
@@ -654,6 +661,7 @@ function mountWebGLFrameLoop(
 
   const builder = new WebGLFrameBuilder(view);
   builder.fog = fog;
+  builder.timeWarp = timeWarp;
 
   // When context is lost and restored, WebGL loses all textures and geometry.
   // Force a full re-upload of the simulation state.

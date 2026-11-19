@@ -282,6 +282,11 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    // TeamStats.Pro OpenFront 4D: the target's Time Echo freezes the attack
+    if (targetPlayer && targetPlayer.timeShieldUntil() > this.mg.ticks()) {
+      return;
+    }
+
     const borderSize = this.attack.borderSize() + this.random.nextInt(0, 5);
     // Each tile consumes a fraction of the tick; conquer until it is spent.
     let tickBudget = 1;

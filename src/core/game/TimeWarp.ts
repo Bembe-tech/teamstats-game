@@ -1,0 +1,147 @@
+// TeamStats.Pro "OpenFront 4D" (lobby option `timeWarp`): time as the
+// fourth dimension.
+//
+// Two halves:
+//   - client only (src/client/TimeWarp.ts): a look at the map as it was up to
+//     PAST_VIEW_MAX_SECONDS ago and a forecast of where attacks and boats get
+//     to. Nothing there touches the simulation.
+//   - the simulation (this file + TimeEchoExecution): the "Time Echo". A
+//     player sends a `time_echo` intent, every browser runs it on the same
+//     tick, so lockstep stays intact. The echo
+//       * gives back the land the player lost in the last ECHO_WINDOW_TICKS,
+//         where the player who took it still holds it;
+//       * freezes every land attack on the player for ECHO_SHIELD_TICKS
+//         (attackers keep their troops, they just make no progress);
+//       * costs ECHO_GOLD_PERCENT of the player's gold, at least
+//         ECHO_MIN_GOLD; ECHO_MAX_USES per game, ECHO_COOLDOWN_TICKS apart.
+//
+// Balance (2026-11-19, tests/perf/fullgame/TimeWarpSim.ts, World, 72
+// nations, 10 min, 6 seeds each): nations echo ~32 times a game, median 2,100
+// tiles back (~35% of their land). With a 5 s freeze, a nation in a crisis
+// (20% of its land gone in 8 s) is alive 60 s later 54% of the time vs 52%
+// with 4D off, and 3 min later 21% vs 21%; players alive at 10 min 22 vs 22.
+// So the echo buys time and a comeback chance without stalling games. An 8 s
+// freeze was clearly stronger (60% / 35%, 29 players alive): too much.
+// Engine cost: none measurable; ChronoLog peaked at 47k entries per 10 s.
+
+/** Ticks of lost land an echo can give back (10 ticks = 1 s). */
+export const ECHO_WINDOW_TICKS = 100;
+/** Ticks attacks on the player stay frozen after an echo. */
+export const ECHO_SHIELD_TICKS = 50;
+/** Echoes per player per game. */
+export const ECHO_MAX_USES = 2;
+/** Ticks between two echoes of one player. */
+export const ECHO_COOLDOWN_TICKS = 1800;
+/** No echo in the first ticks after the spawn phase (land grab). */
+export const ECHO_EARLIEST_TICK_AFTER_SPAWN = 1200;
+/** Share of the player's gold an echo costs. */
+export const ECHO_GOLD_PERCENT = 30n;
+/** An echo needs at least this much gold, and costs at least this much. */
+export const ECHO_MIN_GOLD = 100_000n;
+/**
+ * At most this share (percent) of the player's current land comes back, plus
+ * ECHO_RESTORE_BASE tiles (so a player knocked down to a few tiles still gets
+ * a real comeback, and a giant can't undo a whole war).
+ */
+export const ECHO_MAX_RESTORE_PERCENT = 60;
+export const ECHO_RESTORE_BASE = 300;
+
+export function echoRestoreCap(currentTiles: number): number {
+  return (
+    Math.floor((currentTiles * ECHO_MAX_RESTORE_PERCENT) / 100) +
+    ECHO_RESTORE_BASE
+  );
+}
+
+/** Client: how far back the past view reaches. */
+export const PAST_VIEW_MAX_SECONDS = 15;
+
+export function echoCost(gold: bigint): bigint {
+  const pct = (gold * ECHO_GOLD_PERCENT) / 100n;
+  return pct > ECHO_MIN_GOLD ? pct : ECHO_MIN_GOLD;
+}
+
+export type EchoBlock =
+  | "ok"
+  | "disabled"
+  | "spawn"
+  | "too_early"
+  | "no_uses"
+  | "cooldown"
+  | "gold"
+  | "dead";
+
+export interface EchoState {
+  used: number;
+  readyTick: number;
+}
+
+/** Why a player may not echo right now ("ok" when they may). */
+export function echoBlock(
+  enabled: boolean,
+  alive: boolean,
+  inSpawnPhase: boolean,
+  ticksSinceSpawnPhase: number,
+  now: number,
+  state: EchoState,
+  gold: bigint,
+): EchoBlock {
+  if (!enabled) return "disabled";
+  if (!alive) return "dead";
+  if (inSpawnPhase) return "spawn";
+  if (ticksSinceSpawnPhase < ECHO_EARLIEST_TICK_AFTER_SPAWN) return "too_early";
+  if (state.used >= ECHO_MAX_USES) return "no_uses";
+  if (now < state.readyTick) return "cooldown";
+  if (gold < ECHO_MIN_GOLD) return "gold";
+  return "ok";
+}
+
+/**
+ * The simulation's memory of who took which tile from whom, for the last
+ * ECHO_WINDOW_TICKS. A fixed ring of typed arrays: when a huge war conquers
+ * more than CAPACITY tiles inside the window, the oldest entries drop out
+ * (the same on every client, so still deterministic).
+ */
+export class ChronoLog {
+  static readonly CAPACITY = 1 << 18; // 262k entries, 3 MB
+  private readonly tick = new Int32Array(ChronoLog.CAPACITY);
+  private readonly tile = new Int32Array(ChronoLog.CAPACITY);
+  private readonly from = new Uint16Array(ChronoLog.CAPACITY);
+  private readonly to = new Uint16Array(ChronoLog.CAPACITY);
+  private head = 0; // next write
+  private size = 0;
+  /** True while an echo gives land back: those changes are not echoable. */
+  paused = false;
+
+  record(tick: number, tile: number, fromSmallID: number, toSmallID: number) {
+    if (this.paused) return;
+    const i = this.head;
+    this.tick[i] = tick;
+    this.tile[i] = tile;
+    this.from[i] = fromSmallID;
+    this.to[i] = toSmallID;
+    this.head = (i + 1) & (ChronoLog.CAPACITY - 1);
+    if (this.size < ChronoLog.CAPACITY) this.size++;
+  }
+
+  /**
+   * Newest first: every tile `loser` lost since `sinceTick`, with who took it.
+   * Stops at the first entry older than sinceTick.
+   */
+  forEachLoss(
+    loser: number,
+    sinceTick: number,
+    cb: (tile: number, taker: number) => void,
+  ): void {
+    let i = this.head;
+    for (let n = 0; n < this.size; n++) {
+      i = (i - 1) & (ChronoLog.CAPACITY - 1);
+      if (this.tick[i] < sinceTick) return;
+      if (this.from[i] === loser) cb(this.tile[i], this.to[i]);
+    }
+  }
+
+  entries(): number {
+    return this.size;
+  }
+}
