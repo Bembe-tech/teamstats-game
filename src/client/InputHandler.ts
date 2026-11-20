@@ -6,6 +6,7 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import { Platform } from "./Platform";
+import { SiloSelect } from "./SiloSelect";
 import { UIState } from "./UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { GameView, UnitView } from "./view";
@@ -996,6 +997,9 @@ export class InputHandler {
       // keeps sending after a gesture ends (especially after browser zoom changes
       // devicePixelRatio, which can cause these to accumulate into runaway zoom).
       if (Math.abs(event.deltaY) < 2) return;
+      // TeamStats.Pro Select Silo mode: with a nuke in hand the wheel picks
+      // the launch silo instead of zooming
+      if (SiloSelect.current?.onWheel(event.deltaY)) return;
       this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
     }
   }

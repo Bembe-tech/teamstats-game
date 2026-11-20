@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { resolveSiloSpawn } from "../game/SiloSelect";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import {
   ParabolaUniversalPathFinder,
@@ -59,6 +60,7 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    private siloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -72,7 +74,11 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
+      const nearest = this.player.canBuild(UnitType.MIRV, this.dst);
+      const spawn =
+        nearest === false
+          ? false
+          : resolveSiloSpawn(this.mg, this.player, nearest, this.siloId);
       if (spawn === false) {
         console.warn(`cannot build MIRV`);
         this.active = false;

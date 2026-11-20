@@ -45,6 +45,7 @@ const NULLABLE_KEYS = [
   "customAllianceDuration",
   "waterNukes",
   "fogOfWar",
+  "selectSilo",
   "homeEconomy",
   "kingOfTheHill",
   "kingOfTheHillMinutes",

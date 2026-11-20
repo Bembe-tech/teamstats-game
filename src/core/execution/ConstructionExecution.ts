@@ -23,6 +23,8 @@ export class ConstructionExecution implements Execution {
     private tile: TileRef,
     private rocketDirectionUp?: boolean,
     private amount?: number,
+    // Select Silo mode: launch silo chosen by the player
+    private siloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -117,13 +119,14 @@ export class ConstructionExecution implements Execution {
               -1,
               0,
               this.rocketDirectionUp,
+              this.siloId,
             ),
           );
         }
         break;
       }
       case UnitType.MIRV:
-        this.mg.addExecution(new MirvExecution(player, this.tile));
+        this.mg.addExecution(new MirvExecution(player, this.tile, this.siloId));
         break;
       case UnitType.Warship:
         this.mg.addExecution(

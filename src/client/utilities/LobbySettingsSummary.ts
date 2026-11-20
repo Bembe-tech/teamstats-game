@@ -107,6 +107,11 @@ export function notableLobbySettings(
       label: translateText("game_settings.fog_of_war"),
       value: enabled,
     });
+  if (c.selectSilo)
+    items.push({
+      label: translateText("game_settings.select_silo"),
+      value: enabled,
+    });
   if (c.waterNukes)
     items.push({
       label: translateText("game_settings.water_nukes"),

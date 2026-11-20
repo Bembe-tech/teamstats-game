@@ -432,6 +432,10 @@ export class Config {
   fogOfWar(): boolean {
     return this._gameConfig.fogOfWar ?? false;
   }
+  /** TeamStats.Pro "Select Silo mode" (see game/SiloSelect.ts). */
+  selectSilo(): boolean {
+    return this._gameConfig.selectSilo ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

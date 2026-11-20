@@ -54,6 +54,7 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { SiloSelect } from "./SiloSelect";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
@@ -556,6 +557,7 @@ function mountWebGLFrameLoop(
   gameView: GameView,
   eventBus: EventBus,
   onFrame: (nowMs: number) => void,
+  uiState: import("./UIState").UIState,
 ): { builder: WebGLFrameBuilder; stopFrameLoop: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
@@ -582,6 +584,11 @@ function mountWebGLFrameLoop(
     ? new FogOfWar(mapWidth, mapHeight)
     : null;
   FogOfWar.current = fog;
+  // TeamStats.Pro: Select Silo mode (lobby option): numbered silos
+  const siloSelect = gameView.config().selectSilo()
+    ? new SiloSelect(gameView, uiState)
+    : null;
+  SiloSelect.current = siloSelect;
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
@@ -596,6 +603,7 @@ function mountWebGLFrameLoop(
       (cachedCanvasH - mapHeight) / (2 * scale);
     view.setCameraState(centerX, centerY, scale * dpr);
     fog?.drawOverlay(glCanvas, centerX, centerY, scale);
+    siloSelect?.drawOverlay(glCanvas, centerX, centerY, scale);
     // Invoke the WebGL renderer's frame callback synchronously, with the just-
     // updated camera state. The callback re-arms itself via captureRaf, so
     // we'll get a fresh callback ready for the next canvas2D frame.
@@ -640,6 +648,8 @@ function mountWebGLFrameLoop(
       rafId = null;
     }
     resizeObs.disconnect();
+    siloSelect?.dispose();
+    if (SiloSelect.current === siloSelect) SiloSelect.current = null;
   };
 
   const builder = new WebGLFrameBuilder(view);
@@ -878,6 +888,7 @@ async function createClientGame(
       gameView,
       eventBus,
       (nowMs) => metrics.recordFrame(nowMs),
+      gameRenderer.uiState,
     );
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping

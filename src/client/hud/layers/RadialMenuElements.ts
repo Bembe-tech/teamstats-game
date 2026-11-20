@@ -14,9 +14,10 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
+import { MAX_SILO_NUMBER, SiloSelect } from "../../SiloSelect";
 import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
-import { GameView, PlayerView } from "../../view";
+import { GameView, PlayerView, UnitView } from "../../view";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
@@ -38,6 +39,7 @@ const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const infoIcon = assetUrl("images/InfoIcon.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const siloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
 const xIcon = assetUrl("images/XIcon.svg");
@@ -694,6 +696,79 @@ export const deleteUnitElement: MenuElement = {
   },
 };
 
+// TeamStats.Pro Select Silo mode: number the clicked silo 1-9
+const SILO_PICK_RADIUS = 5;
+
+function nearestOwnSilo(params: MenuElementParams): UnitView | null {
+  const silos = params.myPlayer
+    .units(UnitType.MissileSilo)
+    .filter(
+      (u) =>
+        u.isActive() &&
+        params.game.manhattanDist(u.tile(), params.tile) <= SILO_PICK_RADIUS,
+    );
+  return (
+    findClosestBy(silos, (u) =>
+      params.game.manhattanDist(u.tile(), params.tile),
+    ) ?? null
+  );
+}
+
+export const siloNumberElement: MenuElement = {
+  id: "silo_number",
+  name: "silo_number",
+  disabled: (params: MenuElementParams) =>
+    SiloSelect.current === null || nearestOwnSilo(params) === null,
+  icon: siloIcon,
+  color: COLORS.build,
+  tooltipKeys: [
+    { key: "select_silo.menu_title", className: "title" },
+    { key: "select_silo.menu_description", className: "description" },
+  ],
+  subMenu: (params: MenuElementParams) => {
+    const sel = SiloSelect.current;
+    const silo = nearestOwnSilo(params);
+    if (sel === null || silo === null) return [];
+    const current = sel.numberOf(silo.id());
+    const items: MenuElement[] = [];
+    for (let n = 1; n <= MAX_SILO_NUMBER; n++) {
+      const holder = sel.siloWithNumber(n);
+      items.push({
+        id: `silo_number_${n}`,
+        name: `silo_number_${n}`,
+        text: String(n),
+        fontSize: "22px",
+        // gold = this silo, grey = taken by another silo (picking moves it)
+        color:
+          current === n
+            ? COLORS.build
+            : holder !== null
+              ? COLORS.disabled
+              : COLORS.info,
+        disabled: () => false,
+        action: (p: MenuElementParams) => {
+          sel.assign(silo.id(), n);
+          p.closeMenu();
+        },
+      });
+    }
+    if (current !== null) {
+      items.push({
+        id: "silo_number_clear",
+        name: "silo_number_clear",
+        icon: xIcon,
+        color: COLORS.delete,
+        disabled: () => false,
+        action: (p: MenuElementParams) => {
+          sel.clear(silo.id());
+          p.closeMenu();
+        },
+      });
+    }
+    return items;
+  },
+};
+
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
@@ -804,7 +879,14 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
+        ? [
+            deleteUnitElement,
+            allyRequestElement,
+            buildMenuElement,
+            ...(SiloSelect.current !== null && nearestOwnSilo(params) !== null
+              ? [siloNumberElement]
+              : []),
+          ]
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,

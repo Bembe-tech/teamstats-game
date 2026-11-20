@@ -111,6 +111,7 @@ export class Executor {
           intent.tile,
           intent.rocketDirectionUp,
           intent.amount,
+          intent.silo,
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);

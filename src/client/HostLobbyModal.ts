@@ -103,6 +103,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
   @state() private fogOfWar: boolean = false;
+  @state() private selectSilo: boolean = false;
   @state() private homeEconomy: boolean = false;
   @state() private kingOfTheHill: boolean = false;
   @state() private kingOfTheHillMinutes: number | undefined = undefined;
@@ -527,6 +528,16 @@ export class HostLobbyModal extends BaseModal {
                 min</label
               >`
             : nothing,
+        )}
+        ${card(
+          this.selectSilo,
+          "🚀",
+          "Select Silo mode",
+          "Number your missile silos 1-9 (click a silo, pick a number). With a nuke selected, the mouse wheel switches the launch silo in number order, so you can fire from a farther silo and fly around SAMs. Without picking one, the nearest ready silo fires as usual.",
+          () => {
+            this.selectSilo = !this.selectSilo;
+            this.putGameConfig();
+          },
         )}
         ${card(
           this.homeEconomy,
@@ -1356,6 +1367,7 @@ export class HostLobbyModal extends BaseModal {
     this.allowedPublicIds = "";
     this.waterNukes = false;
     this.fogOfWar = false;
+    this.selectSilo = false;
     this.homeEconomy = false;
     this.kingOfTheHill = false;
     this.kingOfTheHillMinutes = undefined;
@@ -1979,6 +1991,7 @@ export class HostLobbyModal extends BaseModal {
         : [],
       waterNukes: this.waterNukes ? true : null,
       fogOfWar: this.fogOfWar ? true : null,
+      selectSilo: this.selectSilo ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
       kingOfTheHillMinutes: this.kingOfTheHill

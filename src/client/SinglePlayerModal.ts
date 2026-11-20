@@ -116,6 +116,7 @@ const DEFAULT_OPTIONS = {
   customAllianceMinutes: undefined as number | undefined,
   waterNukes: false,
   fogOfWar: false,
+  selectSilo: false,
   homeEconomy: false,
   kingOfTheHill: false,
   kingOfTheHillMinutes: undefined as number | undefined,
@@ -209,6 +210,7 @@ export class SinglePlayerModal extends BaseModal {
     DEFAULT_OPTIONS.customAllianceMinutes;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
   @state() private fogOfWar: boolean = DEFAULT_OPTIONS.fogOfWar;
+  @state() private selectSilo: boolean = DEFAULT_OPTIONS.selectSilo;
   @state() private homeEconomy: boolean = DEFAULT_OPTIONS.homeEconomy;
   @state() private kingOfTheHill: boolean = DEFAULT_OPTIONS.kingOfTheHill;
   @state() private kingOfTheHillMinutes: number | undefined =
@@ -570,6 +572,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.fogOfWar,
                   },
                   {
+                    labelKey: "game_settings.select_silo",
+                    checked: this.selectSilo,
+                  },
+                  {
                     labelKey: "game_settings.home_economy",
                     checked: this.homeEconomy,
                   },
@@ -643,6 +649,7 @@ export class SinglePlayerModal extends BaseModal {
       this.customAllianceMinutes !== DEFAULT_OPTIONS.customAllianceMinutes ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
       this.fogOfWar !== DEFAULT_OPTIONS.fogOfWar ||
+      this.selectSilo !== DEFAULT_OPTIONS.selectSilo ||
       this.homeEconomy !== DEFAULT_OPTIONS.homeEconomy ||
       this.kingOfTheHill !== DEFAULT_OPTIONS.kingOfTheHill ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
@@ -722,6 +729,7 @@ export class SinglePlayerModal extends BaseModal {
     this.customAllianceMinutes = DEFAULT_OPTIONS.customAllianceMinutes;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.fogOfWar = DEFAULT_OPTIONS.fogOfWar;
+    this.selectSilo = DEFAULT_OPTIONS.selectSilo;
     this.homeEconomy = DEFAULT_OPTIONS.homeEconomy;
     this.kingOfTheHill = DEFAULT_OPTIONS.kingOfTheHill;
     this.kingOfTheHillMinutes = DEFAULT_OPTIONS.kingOfTheHillMinutes;
@@ -825,6 +833,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.fog_of_war":
         this.fogOfWar = checked;
+        break;
+      case "game_settings.select_silo":
+        this.selectSilo = checked;
         break;
       case "game_settings.home_economy":
         this.homeEconomy = checked;
@@ -1234,6 +1245,7 @@ export class SinglePlayerModal extends BaseModal {
                   : {}),
                 ...(this.waterNukes ? { waterNukes: true } : {}),
                 ...(this.fogOfWar ? { fogOfWar: true } : {}),
+                ...(this.selectSilo ? { selectSilo: true } : {}),
                 ...(this.homeEconomy ? { homeEconomy: true } : {}),
                 ...(this.kingOfTheHill
                   ? {

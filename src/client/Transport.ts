@@ -47,6 +47,7 @@ import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
+import { SiloSelect } from "./SiloSelect";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -877,12 +878,20 @@ export class Transport {
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
+    // TeamStats.Pro Select Silo mode: launch from the silo the player picked
+    let silo: number | undefined;
+    if (SiloSelect.current !== null) {
+      const pick = SiloSelect.current.launchSilo(event.unit);
+      if (!pick.ok) return;
+      silo = pick.siloId;
+    }
     this.sendIntent({
       type: "build_unit",
       unit: event.unit,
       tile: event.tile,
       rocketDirectionUp: event.rocketDirectionUp,
       amount: event.amount,
+      ...(silo !== undefined ? { silo } : {}),
     });
   }
 

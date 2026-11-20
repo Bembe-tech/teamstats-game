@@ -901,6 +901,7 @@
     "options": "Options",
     "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
+    "select_silo": "Select Silo mode",
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
@@ -1879,6 +1880,14 @@
   },
   "select_lang": {
     "title": "Select Language"
+  },
+  "select_silo": {
+    "launch_from": "Launch from silo {n} (wheel: switch)",
+    "launch_nearest": "Launch from nearest silo (wheel: pick a numbered silo)",
+    "menu_description": "Give this silo a number 1-9. With a nuke selected, the mouse wheel switches between numbered silos.",
+    "menu_title": "Silo number",
+    "none_numbered": "No numbered silos. Click a silo and pick a number first.",
+    "reloading": "Silo {n} is reloading"
   },
   "send_gold_modal": {
     "aria_slider": "Amount slider",

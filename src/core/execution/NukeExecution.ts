@@ -12,6 +12,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { resolveSiloSpawn } from "../game/SiloSelect";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
@@ -36,6 +37,7 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    private siloId?: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -184,7 +186,11 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(this.nukeType, this.dst);
+      const nearest = this.player.canBuild(this.nukeType, this.dst);
+      const spawn =
+        nearest === false
+          ? false
+          : resolveSiloSpawn(this.mg, this.player, nearest, this.siloId);
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
         this.active = false;

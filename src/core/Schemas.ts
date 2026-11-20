@@ -595,6 +595,8 @@ export const GameConfigSchema = z.object({
   waterNukes: z.boolean().nullable().optional(),
   // TeamStats.Pro: each player sees only around their own (and allies') land and units
   fogOfWar: z.boolean().nullable().optional(),
+  // TeamStats.Pro "Select Silo mode": numbered silos, choose the launch silo (build_unit.silo)
+  selectSilo: z.boolean().nullable().optional(),
   // TeamStats.Pro "Self Economy": no trade with other players (allies too), own ports trade with
   // each other, every train stop pays 35k
   homeEconomy: z.boolean().nullable().optional(),
@@ -774,6 +776,8 @@ export const BuildUnitIntentSchema = z.object({
   tile: zb.uint(),
   rocketDirectionUp: z.boolean().optional(),
   amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
+  // Select Silo mode: unit id of the silo the nuke must launch from
+  silo: zb.uint().optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({

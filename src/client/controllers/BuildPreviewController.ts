@@ -29,6 +29,7 @@ import {
 import { buildNukeTrajectory, MapRenderer } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
+import { SiloSelect } from "../SiloSelect";
 import { TransformHandler } from "../TransformHandler";
 import {
   BuildUnitIntentEvent,
@@ -363,7 +364,9 @@ export class BuildPreviewController implements Controller {
           Math.abs(this.game.y(b.tile()) - dstY)),
     );
 
-    const bestSilo = silos[0];
+    // TeamStats.Pro Select Silo mode: the arc starts at the silo the player
+    // picked with the wheel (also while it reloads, so the SAM path shows)
+    const bestSilo = SiloSelect.current?.selectedSilo() ?? silos[0];
     const directionUp = this.uiState.rocketDirectionUp;
     const srcX = this.game.x(bestSilo.tile());
     const srcY = this.game.y(bestSilo.tile());
