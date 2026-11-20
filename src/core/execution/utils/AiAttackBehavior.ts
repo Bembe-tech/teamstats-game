@@ -13,13 +13,16 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
-import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
   assertNever,
   boundingBoxCenter,
   calculateBoundingBoxCenter,
 } from "../../Util";
+import {
+  canSendTroopTransport,
+  troopTransportExecution,
+} from "../AirTransport";
 import { AttackExecution } from "../AttackExecution";
 import { DonateTroopsExecution } from "../DonateTroopExecution";
 import { NationAllianceBehavior } from "../nation/NationAllianceBehavior";
@@ -31,7 +34,6 @@ import {
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
 import { findJuiciestTarget } from "../nation/NationUtils";
-import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
@@ -158,7 +160,7 @@ export class AiAttackBehavior {
     }
 
     this.game.addExecution(
-      new TransportShipExecution(this.player, dst, troops),
+      troopTransportExecution(this.game, this.player, dst, troops),
     );
   }
 
@@ -218,7 +220,7 @@ export class AiAttackBehavior {
       }
 
       // Validate that we can actually build a transport ship to this target
-      if (canBuildTransportShip(this.game, this.player, randTile) === false) {
+      if (canSendTroopTransport(this.game, this.player, randTile) === false) {
         if (owner.isPlayer()) {
           unreachablePlayers.add(owner.id());
         }
@@ -687,7 +689,7 @@ export class AiAttackBehavior {
       );
       if (closest === null) continue;
 
-      if (canBuildTransportShip(this.game, this.player, closest.y)) {
+      if (canSendTroopTransport(this.game, this.player, closest.y)) {
         reachablePlayers.push(entry.player);
         // We only need up to 2 reachable candidates
         if (reachablePlayers.length >= 2) break;
@@ -868,7 +870,7 @@ export class AiAttackBehavior {
         if (this.game.isImpassable(tile)) continue;
         if (this.game.hasOwner(tile)) continue;
         if (this.game.hasFallout(tile)) continue;
-        if (!canBuildTransportShip(this.game, this.player, tile)) continue;
+        if (!canSendTroopTransport(this.game, this.player, tile)) continue;
 
         const troops = Math.min(
           this.player.troops() / 5,
@@ -877,7 +879,7 @@ export class AiAttackBehavior {
         if (troops < 1) return false;
 
         this.game.addExecution(
-          new TransportShipExecution(this.player, tile, troops),
+          troopTransportExecution(this.game, this.player, tile, troops),
         );
         return true;
       }
@@ -1084,7 +1086,7 @@ export class AiAttackBehavior {
       return false;
     }
 
-    if (!canBuildTransportShip(this.game, this.player, closest.y)) {
+    if (!canSendTroopTransport(this.game, this.player, closest.y)) {
       return false;
     }
 
@@ -1097,7 +1099,7 @@ export class AiAttackBehavior {
     }
 
     this.game.addExecution(
-      new TransportShipExecution(this.player, closest.y, troops),
+      troopTransportExecution(this.game, this.player, closest.y, troops),
     );
     return true;
   }

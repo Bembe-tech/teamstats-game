@@ -2,6 +2,7 @@ import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
+import { troopTransportExecution } from "./AirTransport";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRejectExecution } from "./alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
@@ -28,7 +29,6 @@ import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TimeEchoExecution } from "./TimeEchoExecution";
 import { TimeGhostExecution } from "./TimeGhostExecution";
 import { TimeLoopExecution } from "./TimeLoopExecution";
-import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
@@ -85,7 +85,13 @@ export class Executor {
           true,
         );
       case "boat":
-        return new TransportShipExecution(player, intent.dst, intent.troops);
+        // Airports and Planes: a boat order sends a troop plane
+        return troopTransportExecution(
+          this.mg,
+          player,
+          intent.dst,
+          intent.troops,
+        );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
       case "allianceReject":

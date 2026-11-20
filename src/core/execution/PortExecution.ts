@@ -1,5 +1,6 @@
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
+import { CargoPlaneExecution } from "./CargoPlaneExecution";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -55,8 +56,11 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
+    // Airports and Planes: airports send cargo planes instead of ships
     this.mg.addExecution(
-      new TradeShipExecution(this.port.owner(), this.port, port),
+      this.mg.config().airports()
+        ? new CargoPlaneExecution(this.port.owner(), this.port, port)
+        : new TradeShipExecution(this.port.owner(), this.port, port),
     );
   }
 
@@ -97,8 +101,11 @@ export class PortExecution implements Execution {
   // It's a probability list, so if an element appears twice it's because it's
   // twice more likely to be picked later.
   tradingPorts(): Unit[] {
+    const airports = this.mg.config().airports();
     const sourceComponents = new Set<number>();
-    for (const neighbor of this.mg.neighbors(this.port!.tile())) {
+    for (const neighbor of airports
+      ? []
+      : this.mg.neighbors(this.port!.tile())) {
       if (!this.mg.isWater(neighbor)) continue;
       const comp = this.mg.getWaterComponent(neighbor);
       if (comp !== null) sourceComponents.add(comp);
@@ -114,6 +121,8 @@ export class PortExecution implements Execution {
       .flatMap((p) => p.units(UnitType.Port))
       .filter((p) => p !== this.port)
       .filter((p) => {
+        // Airports and Planes: planes fly anywhere, no shared water needed
+        if (airports) return true;
         for (const comp of sourceComponents) {
           if (this.mg.hasWaterComponent(p.tile(), comp)) return true;
         }

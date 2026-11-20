@@ -31,7 +31,11 @@ export class MoveWarshipExecution implements Execution {
         continue;
       }
       // Do not update the warship's patrolTile if it is in a different Water Component
-      if (!mg.hasWaterComponent(warship.tile(), newPatrolTileWaterComponent!)) {
+      // Airports and Planes: fighters fly anywhere
+      if (
+        !mg.config().airports() &&
+        !mg.hasWaterComponent(warship.tile(), newPatrolTileWaterComponent!)
+      ) {
         continue;
       }
       warship.updateWarshipState({

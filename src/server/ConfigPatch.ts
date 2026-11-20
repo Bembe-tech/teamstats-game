@@ -47,6 +47,7 @@ const NULLABLE_KEYS = [
   "fogOfWar",
   "timeWarp",
   "selectSilo",
+  "airports",
   "homeEconomy",
   "kingOfTheHill",
   "kingOfTheHillMinutes",

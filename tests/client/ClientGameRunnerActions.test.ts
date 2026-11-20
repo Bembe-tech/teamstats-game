@@ -97,7 +97,11 @@ function makeRunner(overrides: {
     troops: () => 100,
   };
   const gameView = {
-    config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+    config: () => ({
+      isRandomSpawn: () => false,
+      isReplay: () => false,
+      airports: () => false,
+    }),
     inSpawnPhase: () => overrides.inSpawnPhase ?? false,
     myPlayer: () => null,
     isValidCoord: () => true,

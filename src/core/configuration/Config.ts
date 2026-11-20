@@ -3,6 +3,7 @@ import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
 import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
+import { AIR_DROP_COST } from "../game/Airports";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
@@ -440,6 +441,10 @@ export class Config {
   selectSilo(): boolean {
     return this._gameConfig.selectSilo ?? false;
   }
+  /** TeamStats.Pro "Airports and Planes" (see game/Airports.ts). */
+  airports(): boolean {
+    return this._gameConfig.airports ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
@@ -597,7 +602,10 @@ export class Config {
     switch (type) {
       case UnitType.TransportShip:
         info = {
-          cost: () => 0n,
+          // Airports and Planes: a troop plane costs gold (a boat is free)
+          cost: this.airports()
+            ? this.costWrapper(() => AIR_DROP_COST, UnitType.TransportShip)
+            : () => 0n,
         };
         break;
       case UnitType.Warship:

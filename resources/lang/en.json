@@ -169,10 +169,12 @@
   },
   "build_menu": {
     "desc": {
+      "airport": "Sends cargo planes to generate gold, fighters take off here",
       "atom_bomb": "Small explosion",
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
       "factory": "Creates railroads and spawns trains",
+      "fighter": "Patrols the sky and shoots down enemy planes",
       "hydrogen_bomb": "Large explosion",
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
@@ -890,6 +892,7 @@
     "teams": "Teams"
   },
   "game_settings": {
+    "airports": "Airports and Planes",
     "bots": "Tribes: ",
     "compact_map": "Compact Map",
     "custom_alliances": "Alliance Duration",
@@ -2263,11 +2266,13 @@
     "title": "Tutorial"
   },
   "unit_type": {
+    "airport": "Airport",
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",
     "city": "City",
     "defense_post": "Defense Post",
     "factory": "Factory",
+    "fighter": "Fighter",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
     "missile_silo": "Missile Silo",

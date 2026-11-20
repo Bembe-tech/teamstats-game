@@ -118,6 +118,7 @@ const DEFAULT_OPTIONS = {
   fogOfWar: false,
   timeWarp: false,
   selectSilo: false,
+  airports: false,
   homeEconomy: false,
   kingOfTheHill: false,
   kingOfTheHillMinutes: undefined as number | undefined,
@@ -213,6 +214,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private fogOfWar: boolean = DEFAULT_OPTIONS.fogOfWar;
   @state() private timeWarp: boolean = DEFAULT_OPTIONS.timeWarp;
   @state() private selectSilo: boolean = DEFAULT_OPTIONS.selectSilo;
+  @state() private airports: boolean = DEFAULT_OPTIONS.airports;
   @state() private homeEconomy: boolean = DEFAULT_OPTIONS.homeEconomy;
   @state() private kingOfTheHill: boolean = DEFAULT_OPTIONS.kingOfTheHill;
   @state() private kingOfTheHillMinutes: number | undefined =
@@ -582,6 +584,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.selectSilo,
                   },
                   {
+                    labelKey: "game_settings.airports",
+                    checked: this.airports,
+                  },
+                  {
                     labelKey: "game_settings.home_economy",
                     checked: this.homeEconomy,
                   },
@@ -657,6 +663,7 @@ export class SinglePlayerModal extends BaseModal {
       this.fogOfWar !== DEFAULT_OPTIONS.fogOfWar ||
       this.timeWarp !== DEFAULT_OPTIONS.timeWarp ||
       this.selectSilo !== DEFAULT_OPTIONS.selectSilo ||
+      this.airports !== DEFAULT_OPTIONS.airports ||
       this.homeEconomy !== DEFAULT_OPTIONS.homeEconomy ||
       this.kingOfTheHill !== DEFAULT_OPTIONS.kingOfTheHill ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
@@ -738,6 +745,7 @@ export class SinglePlayerModal extends BaseModal {
     this.fogOfWar = DEFAULT_OPTIONS.fogOfWar;
     this.timeWarp = DEFAULT_OPTIONS.timeWarp;
     this.selectSilo = DEFAULT_OPTIONS.selectSilo;
+    this.airports = DEFAULT_OPTIONS.airports;
     this.homeEconomy = DEFAULT_OPTIONS.homeEconomy;
     this.kingOfTheHill = DEFAULT_OPTIONS.kingOfTheHill;
     this.kingOfTheHillMinutes = DEFAULT_OPTIONS.kingOfTheHillMinutes;
@@ -847,6 +855,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.select_silo":
         this.selectSilo = checked;
+        break;
+      case "game_settings.airports":
+        this.airports = checked;
         break;
       case "game_settings.home_economy":
         this.homeEconomy = checked;
@@ -1258,6 +1269,7 @@ export class SinglePlayerModal extends BaseModal {
                 ...(this.fogOfWar ? { fogOfWar: true } : {}),
                 ...(this.timeWarp ? { timeWarp: true } : {}),
                 ...(this.selectSilo ? { selectSilo: true } : {}),
+                ...(this.airports ? { airports: true } : {}),
                 ...(this.homeEconomy ? { homeEconomy: true } : {}),
                 ...(this.kingOfTheHill
                   ? {

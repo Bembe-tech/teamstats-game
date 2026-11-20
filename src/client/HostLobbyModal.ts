@@ -105,6 +105,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private fogOfWar: boolean = false;
   @state() private timeWarp: boolean = false;
   @state() private selectSilo: boolean = false;
+  @state() private airports: boolean = false;
   @state() private homeEconomy: boolean = false;
   @state() private kingOfTheHill: boolean = false;
   @state() private kingOfTheHillMinutes: number | undefined = undefined;
@@ -547,6 +548,16 @@ export class HostLobbyModal extends BaseModal {
           "Number your missile silos 1-9 (click a silo, pick a number). With a nuke selected, the mouse wheel switches the launch silo in number order, so you can fire from a farther silo and fly around SAMs. Without picking one, the nearest ready silo fires as usual.",
           () => {
             this.selectSilo = !this.selectSilo;
+            this.putGameConfig();
+          },
+        )}
+        ${card(
+          this.airports,
+          "✈️",
+          "Airports and Planes",
+          "Ports become airports, built anywhere on your land (also on maps without water). Trade ships become cargo planes flying straight between airports, longer flights pay more. Boats become troop planes: pick any land tile, troops take off from your nearest land and land right there (100K gold, 10 s cooldown). Warships become fighters that take off from an airport, patrol and shoot planes down. Only fighters can hit planes: SAMs and nukes cannot.",
+          () => {
+            this.airports = !this.airports;
             this.putGameConfig();
           },
         )}
@@ -1380,6 +1391,7 @@ export class HostLobbyModal extends BaseModal {
     this.fogOfWar = false;
     this.timeWarp = false;
     this.selectSilo = false;
+    this.airports = false;
     this.homeEconomy = false;
     this.kingOfTheHill = false;
     this.kingOfTheHillMinutes = undefined;
@@ -2005,6 +2017,7 @@ export class HostLobbyModal extends BaseModal {
       fogOfWar: this.fogOfWar ? true : null,
       timeWarp: this.timeWarp ? true : null,
       selectSilo: this.selectSilo ? true : null,
+      airports: this.airports ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
       kingOfTheHillMinutes: this.kingOfTheHill

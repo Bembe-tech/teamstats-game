@@ -3,6 +3,7 @@ import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
+import { FighterExecution } from "./FighterExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
@@ -129,8 +130,11 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new MirvExecution(player, this.tile, this.siloId));
         break;
       case UnitType.Warship:
+        // Airports and Planes: a warship order builds a fighter
         this.mg.addExecution(
-          new WarshipExecution({ owner: player, patrolTile: this.tile }),
+          this.mg.config().airports()
+            ? new FighterExecution(player, this.tile)
+            : new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
       case UnitType.Port:

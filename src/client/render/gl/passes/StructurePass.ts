@@ -25,6 +25,7 @@ import {
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
 import type { RenderSettings } from "../RenderSettings";
+import { airplanePath } from "../utils/Airplane";
 import {
   getPaletteSize,
   MAX_TRAIL_COLORS,
@@ -56,6 +57,26 @@ const STRUCTURE_ORDER = [
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
+
+/** Icon atlas copy with the given column redrawn as a white airplane. */
+function withAirportIcon(img: HTMLImageElement, col: number): TexImageSource {
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  if (ctx === null) return img;
+  ctx.drawImage(img, 0, 0);
+  const cell = img.width / ATLAS_COLS;
+  ctx.clearRect(col * cell, 0, cell, img.height);
+  ctx.save();
+  ctx.translate(col * cell + cell / 2, img.height / 2);
+  ctx.scale(cell / 64, img.height / 64);
+  ctx.rotate(-Math.PI / 4);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill(airplanePath(), "nonzero");
+  ctx.restore();
+  return canvas;
+}
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -133,6 +154,8 @@ export class StructurePass {
     paletteTex: WebGLTexture,
     effectTex: WebGLTexture,
     settings: RenderSettings,
+    // TeamStats.Pro Airports and Planes: the port icon becomes an airplane
+    private readonly airportIcon = false,
   ) {
     this.gl = gl;
     this.settings = settings;
@@ -282,10 +305,13 @@ export class StructurePass {
     img.crossOrigin = "anonymous";
     img.src = iconAtlasUrl;
     await img.decode();
+    const source: TexImageSource = this.airportIcon
+      ? withAirportIcon(img, STRUCTURE_ORDER.indexOf(UT_PORT))
+      : img;
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,

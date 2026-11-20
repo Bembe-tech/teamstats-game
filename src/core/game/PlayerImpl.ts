@@ -8,6 +8,7 @@ import {
   toInt,
   within,
 } from "../Util";
+import { airDropSpawn, fighterSpawn, nearestOwnTile } from "./Airports";
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
@@ -1678,13 +1679,23 @@ export class PlayerImpl implements Player {
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
+        // Airports and Planes: an airport goes on any own land tile
+        if (this.mg.config().airports()) {
+          return this.landBasedStructureSpawn(targetTile, validTiles);
+        }
         return this.portSpawn(targetTile, validTiles);
       case UnitType.Warship:
+        if (this.mg.config().airports()) {
+          return fighterSpawn(this.mg, this, targetTile);
+        }
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
       case UnitType.SAMMissile:
         return targetTile;
       case UnitType.TransportShip:
+        if (this.mg.config().airports()) {
+          return airDropSpawn(this.mg, this, targetTile);
+        }
         return canBuildTransportShip(this.mg, this, targetTile);
       case UnitType.TradeShip:
         return this.tradeShipSpawn(targetTile);
@@ -2038,6 +2049,9 @@ export class PlayerImpl implements Player {
   }
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
+    if (this.mg.config().airports()) {
+      return nearestOwnTile(this.mg, this, targetTile) ?? false;
+    }
     return bestShoreDeploymentSource(this.mg, this, targetTile) ?? false;
   }
 }

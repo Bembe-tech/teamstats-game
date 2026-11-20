@@ -1,4 +1,5 @@
 import { atan2 } from "../DetMath";
+import { isPlaneType } from "../game/Airports";
 import {
   Execution,
   Game,
@@ -405,7 +406,10 @@ export class NukeExecution implements Execution {
     // Then compute the explosion effect on each player
     for (const [player, numImpactedTiles] of tilesPerPlayers) {
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
-      const transportShips = player.units(UnitType.TransportShip);
+      // Airports and Planes: troops in a plane are in the air, a nuke misses them
+      const transportShips = mg.config().airports()
+        ? []
+        : player.units(UnitType.TransportShip);
       const transportShipTroops = new Map<Unit, number>();
       for (const unit of transportShips) {
         transportShipTroops.set(unit, unit.troops());
@@ -452,6 +456,7 @@ export class NukeExecution implements Execution {
 
     const outer2 = magnitude.outer * magnitude.outer;
     const dst = this.dst;
+    const airports = mg.config().airports();
     for (const unit of mg.units()) {
       const type = unit.type();
       if (
@@ -459,7 +464,9 @@ export class NukeExecution implements Execution {
         type === UnitType.HydrogenBomb ||
         type === UnitType.MIRVWarhead ||
         type === UnitType.MIRV ||
-        type === UnitType.SAMMissile
+        type === UnitType.SAMMissile ||
+        // Airports and Planes: only fighters can bring planes down
+        (airports && isPlaneType(type))
       ) {
         continue;
       }

@@ -34,6 +34,8 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
+import { AirOverlay } from "./AirOverlay";
+import { applyAirportsUi } from "./AirportsUi";
 import { isDesktopShell } from "./DesktopShell";
 import { FogOfWar } from "./FogOfWar";
 import { GameMetrics } from "./GameMetrics";
@@ -595,6 +597,12 @@ function mountWebGLFrameLoop(
     ? new SiloSelect(gameView, uiState)
     : null;
   SiloSelect.current = siloSelect;
+  // TeamStats.Pro: Airports and Planes mode (lobby option): planes overlay
+  const airOverlay = gameView.config().airports()
+    ? new AirOverlay(gameView, gameView.config().msPerTick())
+    : null;
+  AirOverlay.current = airOverlay;
+  applyAirportsUi(gameView.config().airports());
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
@@ -610,6 +618,7 @@ function mountWebGLFrameLoop(
     view.setCameraState(centerX, centerY, scale * dpr);
     fog?.drawOverlay(glCanvas, centerX, centerY, scale);
     timeWarp?.drawOverlay(glCanvas, centerX, centerY, scale);
+    airOverlay?.drawOverlay(glCanvas, centerX, centerY, scale);
     siloSelect?.drawOverlay(glCanvas, centerX, centerY, scale);
     // Invoke the WebGL renderer's frame callback synchronously, with the just-
     // updated camera state. The callback re-arms itself via captureRaf, so
@@ -656,6 +665,8 @@ function mountWebGLFrameLoop(
     }
     resizeObs.disconnect();
     siloSelect?.dispose();
+    airOverlay?.dispose();
+    if (AirOverlay.current === airOverlay) AirOverlay.current = null;
     if (SiloSelect.current === siloSelect) SiloSelect.current = null;
   };
 
@@ -1590,6 +1601,8 @@ export class ClientGameRunner {
 
   private canAutoBoat(buildables: BuildableUnit[], tile: TileRef): boolean {
     if (!this.gameView.isLand(tile)) return false;
+    // Airports and Planes: a troop plane costs gold, so never on a plain click
+    if (this.gameView.config().airports()) return false;
 
     const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;

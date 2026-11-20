@@ -117,6 +117,11 @@ export function notableLobbySettings(
       label: translateText("game_settings.select_silo"),
       value: enabled,
     });
+  if (c.airports)
+    items.push({
+      label: translateText("game_settings.airports"),
+      value: enabled,
+    });
   if (c.waterNukes)
     items.push({
       label: translateText("game_settings.water_nukes"),

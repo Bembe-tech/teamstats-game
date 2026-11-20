@@ -262,6 +262,8 @@ export class UnitPass {
   private friendlyOwners = new Set<number>();
   private structures: Map<number, UnitState> = new Map();
 
+  private planesMode = false;
+
   constructor(
     gl: WebGL2RenderingContext,
     header: RendererConfig,
@@ -276,6 +278,9 @@ export class UnitPass {
     this.paletteTex = paletteTex;
     this.effectTex = effectTex;
     this.tickIntervalMs = config.msPerTick();
+    // Airports and Planes: boats, trade ships and warships are planes, drawn
+    // by the client's AirOverlay instead
+    this.planesMode = config.airports();
 
     // Build unitType string → atlas column mapping
     for (let i = 0; i < header.unitTypes.length; i++) {
@@ -456,6 +461,14 @@ export class UnitPass {
 
     for (const unit of units.values()) {
       if (!unit.isActive || unit.waitTicks > 0) continue;
+      if (
+        this.planesMode &&
+        (unit.unitType === UT_TRANSPORT ||
+          unit.unitType === UT_TRADE_SHIP ||
+          unit.unitType === UT_WARSHIP)
+      ) {
+        continue;
+      }
 
       let atlasIdx = this.typeToAtlasCol.get(unit.unitType);
 

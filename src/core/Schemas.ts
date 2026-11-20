@@ -603,6 +603,10 @@ export const GameConfigSchema = z.object({
   timeWarp: z.boolean().nullable().optional(),
   // TeamStats.Pro "Select Silo mode": numbered silos, choose the launch silo (build_unit.silo)
   selectSilo: z.boolean().nullable().optional(),
+  // TeamStats.Pro "Airports and Planes": ports become airports (built on land),
+  // trade ships become cargo planes, boats become troop planes, warships become
+  // fighters (the only thing that can shoot planes down). See game/Airports.ts
+  airports: z.boolean().nullable().optional(),
   // TeamStats.Pro "Self Economy": no trade with other players (allies too), own ports trade with
   // each other, every train stop pays 35k
   homeEconomy: z.boolean().nullable().optional(),
