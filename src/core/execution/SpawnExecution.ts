@@ -2,12 +2,14 @@ import {
   Execution,
   Game,
   GameType,
+  MessageType,
   Player,
   PlayerInfo,
   PlayerType,
   SpawnArea,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { inThroneZone } from "../game/ThroneZone";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -131,7 +133,19 @@ export class SpawnExecution implements Execution {
         return;
       }
 
-      return { center, tiles };
+      if (!this.inThroneZone(center, tiles)) {
+        return { center, tiles };
+      }
+      // King of the Hill 2: nobody starts on the throne. A player's pick is
+      // refused (they pick again), a nation falls back to a random spot.
+      if (this.fromIntent) {
+        this.mg.displayMessage(
+          "events_display.throne_no_spawn",
+          MessageType.ATTACK_FAILED,
+          this.playerInfo.id,
+        );
+        return;
+      }
     }
 
     const spawnArea = this.getTeamSpawnArea();
@@ -177,11 +191,21 @@ export class SpawnExecution implements Execution {
         // if some of the spawn tile is outside of the land, we want to find another spawn tile
         continue;
       }
+      if (this.inThroneZone(center, tiles)) continue;
 
       return { center, tiles };
     }
 
     return;
+  }
+
+  /** King of the Hill 2: players and nations may not start in the throne
+   *  zone (tribes may, they are just land to take). */
+  private inThroneZone(center: TileRef, tiles: TileRef[]): boolean {
+    if (!this.mg.config().kingOfTheHill2()) return false;
+    if (this.playerInfo.playerType === PlayerType.Bot) return false;
+    if (inThroneZone(this.mg, center)) return true;
+    return tiles.some((t) => inThroneZone(this.mg, t));
   }
 
   private randTile(area?: SpawnArea): TileRef {

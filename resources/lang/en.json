@@ -795,6 +795,7 @@
     "throne_empty": "🏰 The throne is empty",
     "throne_low_army": "🏰 Throne unpowered: your garrison is below {share}% of your army",
     "throne_no_gold": "🏰 Throne unpowered: not enough gold to pay for the reign",
+    "throne_no_spawn": "🏰 You cannot start in the throne zone, pick another spot",
     "throne_taken": "🏰 {name} took the throne",
     "time_echo_against": "⌛ {name} used a Time Echo: {tiles} tiles you took are theirs again, your attack is frozen for {seconds} s",
     "time_echo_used": "⌛ Time Echo: {tiles} tiles of your land are back, attacks on you are frozen for {seconds} s",

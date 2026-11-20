@@ -17,6 +17,20 @@ export function throneZone(mg: Game): TileRef[] {
   return zone;
 }
 
+const zoneSetCache = new WeakMap<object, Set<TileRef>>();
+
+/** True when `tile` lies in the throne zone (only in King of the Hill 2). */
+export function inThroneZone(mg: Game, tile: TileRef): boolean {
+  if (!mg.config().kingOfTheHill2()) return false;
+  const map = mg.map();
+  let set = zoneSetCache.get(map);
+  if (set === undefined) {
+    set = new Set(throneZone(mg));
+    zoneSetCache.set(map, set);
+  }
+  return set.has(tile);
+}
+
 /** Number of zone tiles owned per smallID. */
 export function throneZoneOwners(mg: Game): Map<number, number> {
   const out = new Map<number, number>();

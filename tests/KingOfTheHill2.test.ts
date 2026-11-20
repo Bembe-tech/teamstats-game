@@ -141,6 +141,25 @@ describe("King of the Hill 2", () => {
     expect(game.getWinner()).toBe(a);
   });
 
+  test("players cannot spawn in the throne zone", async () => {
+    const game = await setup(
+      "plains",
+      { kingOfTheHill2: true },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
+    const info = new PlayerInfo("s", PlayerType.Human, null, "s");
+    game.addPlayer(info);
+    game.addExecution(new SpawnExecution(gameID, info, game.ref(50, 50), true));
+    executeTicks(game, 2);
+    expect(game.player("s").numTilesOwned()).toBe(0);
+    game.addExecution(new SpawnExecution(gameID, info, game.ref(10, 10), true));
+    executeTicks(game, 2);
+    expect(game.player("s").numTilesOwned()).toBeGreaterThan(0);
+  });
+
   test("costs grow with reign time", () => {
     expect(throneGoldPerSecond(200)).toBeGreaterThan(throneGoldPerSecond(0));
     expect(throneHolderDrain(200)).toBeGreaterThan(throneHolderDrain(0));
