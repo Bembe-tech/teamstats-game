@@ -176,3 +176,57 @@ describe("TimeWarp forecast", () => {
     expect(warp.fronts[0].tiles).toBe(333); // 100 tiles/tick x 3.33 ticks
   });
 });
+
+describe("TimeWarp never stops the game", () => {
+  test("an error inside turns the 4D views off and shows the live map", () => {
+    const warp = new TimeWarp(W, H);
+    const { tiles } = run(warp, 20);
+    const bad = {
+      ...(view() as object),
+      myPlayer: () => {
+        throw new Error("boom");
+      },
+    } as never;
+    // tick 25: a forecast tick, the broken view throws inside
+    const out = warp.filter(bad, frame(25, tiles, [])) as never as {
+      tileState: Uint16Array;
+      changedTiles: number[] | null;
+    };
+    expect(warp.failed).toContain("boom");
+    expect(out.tileState).toBe(tiles);
+    expect(out.changedTiles).toBeNull(); // one full upload of the live map
+    // From now on frames pass through untouched, even when looking back
+    warp.setPast(5);
+    const f = frame(26, tiles, []);
+    expect(warp.filter(view(), f)).toBe(f);
+  });
+
+  test("a drawing error does not escape the frame loop", () => {
+    const warp = new TimeWarp(W, H);
+    const canvas = {
+      clientWidth: 100,
+      clientHeight: 100,
+      style: { filter: "" },
+      insertAdjacentElement: () => {
+        throw new Error("no canvas");
+      },
+    } as never;
+    expect(() => warp.drawOverlay(canvas, 0, 0, 1)).not.toThrow();
+    expect(warp.failed).toContain("no canvas");
+  });
+
+  test("a tick with a huge number of changes restarts the history", () => {
+    const warp = new TimeWarp(2048, 1100); // 2.25M tiles
+    const tiles = new Uint16Array(2048 * 1100);
+    warp.filter(view(), frame(0, tiles, null));
+    tiles.fill(ME);
+    warp.filter(view(), frame(1, tiles, null)); // every tile changed
+    expect(warp.failed).toBeNull();
+    expect(warp.logEntries()).toBe(0);
+    warp.setPast(1);
+    const back = warp.filter(view(), frame(2, tiles, [])) as never as {
+      tileState: Uint16Array;
+    };
+    expect(back.tileState[5]).toBe(ME); // history starts at the reset
+  });
+});

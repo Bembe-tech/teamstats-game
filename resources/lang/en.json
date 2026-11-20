@@ -2147,7 +2147,8 @@
     "past": "Look back",
     "past_hint": "Show the map as it was a few seconds ago. The game keeps running.",
     "past_on": "Past: -{s} s (back to now)",
-    "shield": "Attacks frozen: {s} s"
+    "shield": "Attacks frozen: {s} s",
+    "view_off": "Look back and forecast were turned off after an error. The game and the Time Echo keep working."
   },
   "token_login_modal": {
     "success": "Successfully logged in as {email}!",

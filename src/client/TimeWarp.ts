@@ -31,7 +31,12 @@ const SNAPSHOT_EVERY = 20; // ticks between unit snapshots
 const FORECAST_TICKS = 100; // 10 s
 const FORECAST_EVERY = 5; // ticks between forecast recomputes
 const RATE_TICKS = 30; // attack speed measured over the last 3 s
-const CELL = 2; // forecast image cell, in tiles
+// Forecast image cell, in tiles: 2 on normal maps, 4 on huge ones (over 4M
+// tiles, e.g. Giant World Map or big TeamStats maps) to keep the image small
+const cellFor = (w: number, h: number): number => (w * h > 4_000_000 ? 4 : 2);
+// One tick changing more tiles than this restarts the history instead of
+// filling the whole log with one tick
+const MAX_TICK_CHANGES = LOG_CAPACITY >> 2;
 
 // Unit types kept in past snapshots (trade ships and trains are left out:
 // many of them, and they say little about the war)
@@ -97,6 +102,7 @@ export class TimeWarp {
 
   // ── forecast ──
   forecastOn = true;
+  private readonly cell: number;
   private readonly fcCw: number;
   private readonly fcCh: number;
   private readonly fcCells: Uint8Array; // 0 none, 1 loss, 2 gain
@@ -113,6 +119,13 @@ export class TimeWarp {
   private overlayCtx: CanvasRenderingContext2D | null = null;
   private lastCam = "";
 
+  /**
+   * Set when something in here threw: 4D views switch off for the rest of
+   * the game (the map shows live again) instead of stopping the game. The
+   * Time Echo is part of the simulation and keeps working.
+   */
+  failed: string | null = null;
+
   /** Milliseconds spent in record + view + forecast, last 100 ticks (perf). */
   readonly perf = { recordMs: 0, viewMs: 0, forecastMs: 0, ticks: 0 };
 
@@ -122,8 +135,9 @@ export class TimeWarp {
   ) {
     this.shadow = new Uint16Array(w * h);
     this.viewBuf = new Uint16Array(0); // allocated on first look back
-    this.fcCw = Math.ceil(w / CELL);
-    this.fcCh = Math.ceil(h / CELL);
+    this.cell = cellFor(w, h);
+    this.fcCw = Math.ceil(w / this.cell);
+    this.fcCh = Math.ceil(h / this.cell);
     this.fcCells = new Uint8Array(this.fcCw * this.fcCh);
     this.bfsMark = new Uint16Array(w * h);
     this.fcImage = document.createElement("canvas");
@@ -185,6 +199,28 @@ export class TimeWarp {
    * back; the frame itself otherwise).
    */
   filter(gameView: GameView, frame: FrameData): FrameData {
+    if (this.failed !== null) return frame;
+    try {
+      return this.filterUnsafe(gameView, frame);
+    } catch (e) {
+      this.fail(e);
+      // Back to the live map with one full upload
+      return { ...frame, changedTiles: null, structuresDirty: true };
+    }
+  }
+
+  /** Turns the 4D views off after an error (see `failed`). */
+  fail(e: unknown): void {
+    if (this.failed !== null) return;
+    this.failed = String(e instanceof Error ? e.message : e);
+    console.error("OpenFront 4D view turned off after an error:", e);
+    this.offsetTicks = 0;
+    this.boats = [];
+    this.fronts = [];
+    this.lastCam = "";
+  }
+
+  private filterUnsafe(gameView: GameView, frame: FrameData): FrameData {
     const t0 = performance.now();
     this.record(frame);
     const t1 = performance.now();
@@ -218,9 +254,19 @@ export class TimeWarp {
     if (!this.initialized) {
       this.shadow.set(tiles);
       this.initialized = true;
+    } else if (
+      frame.changedTiles !== null &&
+      frame.changedTiles.length > MAX_TICK_CHANGES
+    ) {
+      this.resetHistory(tiles, tick);
+      return;
     } else if (frame.changedTiles === null) {
       for (let i = 0; i < tiles.length; i++) {
         if (this.shadow[i] !== tiles[i]) this.push(i, tiles[i]);
+        if (this.writePos - g.start > MAX_TICK_CHANGES) {
+          this.resetHistory(tiles, tick);
+          return;
+        }
       }
     } else {
       for (const ref of frame.changedTiles) {
@@ -242,6 +288,13 @@ export class TimeWarp {
     if (drop > 0) this.groups.splice(0, drop);
 
     if (tick % SNAPSHOT_EVERY === 0) this.snapshotUnits(frame);
+  }
+
+  /** Forget the history: the map as it is now is the oldest moment. */
+  private resetHistory(tiles: Uint16Array, tick: number): void {
+    this.shadow.set(tiles);
+    this.groups = [{ tick, start: this.writePos, end: this.writePos }];
+    this.viewing = false;
   }
 
   private push(ref: number, value: number): void {
@@ -532,7 +585,8 @@ export class TimeWarp {
       n++;
       sx += x;
       sy += y;
-      this.fcCells[((y / CELL) | 0) * this.fcCw + ((x / CELL) | 0)] = mark;
+      this.fcCells[((y / this.cell) | 0) * this.fcCw + ((x / this.cell) | 0)] =
+        mark;
       neighbors(ref, tryAdd);
     }
     return { n, sx, sy };
@@ -541,6 +595,37 @@ export class TimeWarp {
   // ── drawing ──
 
   drawOverlay(
+    glCanvas: HTMLCanvasElement,
+    centerX: number,
+    centerY: number,
+    scale: number,
+  ): void {
+    // Runs inside the frame loop: an error here must never stop it
+    try {
+      if (this.failed !== null) {
+        this.clearOverlay(glCanvas);
+        return;
+      }
+      this.drawOverlayUnsafe(glCanvas, centerX, centerY, scale);
+    } catch (e) {
+      this.fail(e);
+      try {
+        this.clearOverlay(glCanvas);
+      } catch {
+        // nothing more to do
+      }
+    }
+  }
+
+  private clearOverlay(glCanvas: HTMLCanvasElement): void {
+    if (glCanvas.style.filter !== "") glCanvas.style.filter = "";
+    if (this.lastCam === "off") return;
+    this.lastCam = "off";
+    const c = this.overlay;
+    c?.getContext("2d")?.clearRect(0, 0, c.width, c.height);
+  }
+
+  private drawOverlayUnsafe(
     glCanvas: HTMLCanvasElement,
     centerX: number,
     centerY: number,
@@ -611,7 +696,13 @@ export class TimeWarp {
     const ty = (cssH / 2) * dpr - centerY * s;
     ctx.setTransform(s, 0, 0, s, tx, ty);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.fcImage, 0, 0, this.fcCw * CELL, this.fcCh * CELL);
+    ctx.drawImage(
+      this.fcImage,
+      0,
+      0,
+      this.fcCw * this.cell,
+      this.fcCh * this.cell,
+    );
 
     // Boat paths (screen space, so lines stay thin when zoomed in)
     ctx.setTransform(1, 0, 0, 1, 0, 0);

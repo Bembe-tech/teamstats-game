@@ -84,6 +84,7 @@ export class TimeWarpPanel extends LitElement implements Controller {
       </button>`;
     }
     const avail = Math.min(PAST_VIEW_MAX_SECONDS, warp.availableSeconds());
+    if (warp.failed !== null && this.pastS > 0) this.pastS = 0;
     const viewing = this.pastS > 0;
 
     return html`
@@ -102,50 +103,57 @@ export class TimeWarpPanel extends LitElement implements Controller {
           </button>
         </div>
 
-        <button
-          class="rounded px-2 py-1 text-left ${viewing
-            ? "bg-amber-700"
-            : "bg-gray-700 hover:bg-gray-600"}"
-          ?disabled=${avail < 1}
-          title=${translateText("time_warp.past_hint")}
-          @click=${() => this.togglePast()}
-        >
-          ⏪
-          ${viewing
-            ? translateText("time_warp.past_on", { s: this.pastS })
-            : translateText("time_warp.past")}
-        </button>
-        ${viewing
-          ? html`<input
-              type="range"
-              min="1"
-              max=${Math.max(1, avail)}
-              .value=${String(Math.min(this.pastS, Math.max(1, avail)))}
-              @input=${(e: Event) =>
-                this.setPast(Number((e.target as HTMLInputElement).value))}
-            />`
-          : nothing}
-
-        <button
-          class="rounded px-2 py-1 text-left ${warp.forecastOn
-            ? "bg-cyan-800"
-            : "bg-gray-700 hover:bg-gray-600"}"
-          title=${translateText("time_warp.forecast_hint")}
-          @click=${() => {
-            warp.forecastOn = !warp.forecastOn;
-            this.requestUpdate();
-          }}
-        >
-          🔮
-          ${translateText(
-            warp.forecastOn
-              ? "time_warp.forecast_on"
-              : "time_warp.forecast_off",
-          )}
-        </button>
-
+        ${warp.failed !== null
+          ? html`<div class="text-[10px] text-amber-300 leading-tight">
+              ${translateText("time_warp.view_off")}
+            </div>`
+          : this.renderViews(warp, avail, viewing)}
         ${me ? this.renderEcho() : nothing}
       </div>
+    `;
+  }
+
+  private renderViews(warp: TimeWarp, avail: number, viewing: boolean) {
+    return html`
+      <button
+        class="rounded px-2 py-1 text-left ${viewing
+          ? "bg-amber-700"
+          : "bg-gray-700 hover:bg-gray-600"}"
+        ?disabled=${avail < 1}
+        title=${translateText("time_warp.past_hint")}
+        @click=${() => this.togglePast()}
+      >
+        ⏪
+        ${viewing
+          ? translateText("time_warp.past_on", { s: this.pastS })
+          : translateText("time_warp.past")}
+      </button>
+      ${viewing
+        ? html`<input
+            type="range"
+            min="1"
+            max=${Math.max(1, avail)}
+            .value=${String(Math.min(this.pastS, Math.max(1, avail)))}
+            @input=${(e: Event) =>
+              this.setPast(Number((e.target as HTMLInputElement).value))}
+          />`
+        : nothing}
+
+      <button
+        class="rounded px-2 py-1 text-left ${warp.forecastOn
+          ? "bg-cyan-800"
+          : "bg-gray-700 hover:bg-gray-600"}"
+        title=${translateText("time_warp.forecast_hint")}
+        @click=${() => {
+          warp.forecastOn = !warp.forecastOn;
+          this.requestUpdate();
+        }}
+      >
+        🔮
+        ${translateText(
+          warp.forecastOn ? "time_warp.forecast_on" : "time_warp.forecast_off",
+        )}
+      </button>
     `;
   }
 

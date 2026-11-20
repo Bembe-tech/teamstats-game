@@ -315,10 +315,28 @@ export class WebGLFrameBuilder {
     // TeamStats.Pro: with Fog of War the renderer only gets what the player can see
     // TeamStats.Pro: OpenFront 4D records what was shown and may show the past
     const seen = this.fog !== null ? this.fog.filter(gameView, frame) : frame;
-    uploadFrameData(
-      this.view,
-      this.timeWarp !== null ? this.timeWarp.filter(gameView, seen) : seen,
-    );
+    const warp = this.timeWarp;
+    if (warp === null || warp.failed !== null) {
+      uploadFrameData(this.view, seen);
+      return;
+    }
+    const shown = warp.filter(gameView, seen);
+    if (shown === seen) {
+      uploadFrameData(this.view, seen);
+      return;
+    }
+    // A past frame the renderer can't take must not stop the game: turn the
+    // 4D views off and show the live map again (full upload).
+    try {
+      uploadFrameData(this.view, shown);
+    } catch (e) {
+      warp.fail(e);
+      uploadFrameData(this.view, {
+        ...seen,
+        changedTiles: null,
+        structuresDirty: true,
+      });
+    }
   }
 
   /**
