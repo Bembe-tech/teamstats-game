@@ -58,7 +58,8 @@ export type Intent =
   | ToggleGameStartTimer
   | TimeEchoIntent
   | DelayedOrderIntent
-  | TimeGhostIntent;
+  | TimeGhostIntent
+  | TimeLoopIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -860,6 +861,12 @@ export const TimeEchoIntentSchema = z.object({
 });
 export type TimeEchoIntent = z.infer<typeof TimeEchoIntentSchema>;
 
+// TeamStats.Pro "OpenFront 4D": the sender's Time Loop (see TimeLoopExecution)
+export const TimeLoopIntentSchema = z.object({
+  type: z.literal("time_loop"),
+});
+export type TimeLoopIntent = z.infer<typeof TimeLoopIntentSchema>;
+
 // TeamStats.Pro "OpenFront 4D": raise a ghost army (see TimeGhostExecution)
 export const TimeGhostIntentSchema = z.object({
   type: z.literal("time_ghost"),
@@ -908,6 +915,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TimeEchoIntentSchema,
   DelayedOrderIntentSchema,
   TimeGhostIntentSchema,
+  TimeLoopIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

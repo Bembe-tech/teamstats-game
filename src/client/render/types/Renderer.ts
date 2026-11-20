@@ -73,6 +73,8 @@ export interface PlayerState {
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
   delayedOrders?: import("../../../core/game/TimeWarp").DelayedOrderView[];
+  loopUses?: number;
+  lastParadox?: import("../../../core/game/TimeWarp").ParadoxView | null;
   ghostUses?: number;
   ghostReadyTick?: number;
   lastGhost?: import("../../../core/game/TimeWarp").GhostView | null;

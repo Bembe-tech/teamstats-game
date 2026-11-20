@@ -5,7 +5,6 @@
 //   attacks running out of troops, the end of a freeze)
 import { LitElement, html, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
-import { PAST_VIEW_MAX_SECONDS } from "../../../core/game/TimeWarp";
 import { Controller } from "../../Controller";
 import { TimeWarp } from "../../TimeWarp";
 import { GameView } from "../../view";
@@ -106,21 +105,26 @@ export class TimeWarpTimeline extends LitElement implements Controller {
         color: f.incoming ? TONE.foe : TONE.me,
       });
     }
-    return out.filter((m) => m.s >= -PAST_VIEW_MAX_SECONDS && m.s <= FUTURE_S);
+    return out.filter((m) => m.s >= -this.pastMax() && m.s <= FUTURE_S);
+  }
+
+  /** Seconds of past on the bar (longer for observers). */
+  private pastMax(): number {
+    return TimeWarp.current?.maxSeconds() ?? 15;
   }
 
   private pctOf(s: number): number {
-    const span = PAST_VIEW_MAX_SECONDS + FUTURE_S;
-    return ((s + PAST_VIEW_MAX_SECONDS) / span) * 100;
+    const span = this.pastMax() + FUTURE_S;
+    return ((s + this.pastMax()) / span) * 100;
   }
 
   private seekFromEvent(e: PointerEvent, warp: TimeWarp) {
     const bar = this.querySelector(".tw-bar") as HTMLElement | null;
     if (!bar) return;
     const r = bar.getBoundingClientRect();
-    const span = PAST_VIEW_MAX_SECONDS + FUTURE_S;
-    const s = ((e.clientX - r.left) / r.width) * span - PAST_VIEW_MAX_SECONDS;
-    const avail = Math.min(PAST_VIEW_MAX_SECONDS, warp.availableSeconds());
+    const span = this.pastMax() + FUTURE_S;
+    const s = ((e.clientX - r.left) / r.width) * span - this.pastMax();
+    const avail = Math.min(this.pastMax(), warp.availableSeconds());
     warp.setPast(s >= 0 ? 0 : Math.min(avail, Math.max(1, Math.round(-s))));
     this.requestUpdate();
   }
@@ -129,7 +133,7 @@ export class TimeWarpTimeline extends LitElement implements Controller {
     const warp = TimeWarp.current;
     if (!this.game || !warp || warp.failed !== null) return nothing;
     const past = warp.pastSeconds();
-    const avail = Math.min(PAST_VIEW_MAX_SECONDS, warp.availableSeconds());
+    const avail = Math.min(this.pastMax(), warp.availableSeconds());
     const nowPct = this.pctOf(0);
     return html`
       <div
@@ -181,7 +185,7 @@ export class TimeWarpTimeline extends LitElement implements Controller {
             >`,
         )}
         <span class="absolute top-0 left-1 text-[9px] text-gray-400"
-          >-${PAST_VIEW_MAX_SECONDS}s</span
+          >-${this.pastMax()}s</span
         >
         <span
           class="absolute top-0 -translate-x-1/2 text-[9px] text-white"

@@ -19,7 +19,11 @@
 //     the attack has left; troops lost per tile is measured, not guessed.
 
 import { UnitType } from "../core/game/Game";
-import { GHOST_MARK_TICKS, PAST_VIEW_MAX_SECONDS } from "../core/game/TimeWarp";
+import {
+  GHOST_MARK_TICKS,
+  PARADOX_MARK_TICKS,
+  PAST_VIEW_MAX_SECONDS,
+} from "../core/game/TimeWarp";
 import { FogOfWar } from "./FogOfWar";
 import { OWNER_MASK } from "./render/gl/utils/TileCodec";
 import type { FrameData, UnitState } from "./render/types";
@@ -28,6 +32,8 @@ import type { GameView } from "./view";
 /** Max delta entries kept (8 bytes each: 16 MB). */
 const LOG_CAPACITY = 1 << 21;
 const MAX_TICKS = PAST_VIEW_MAX_SECONDS * 10;
+/** Observers (dead players, spectators) look back further. */
+export const OBSERVER_MAX_SECONDS = 60;
 const SNAPSHOT_EVERY = 20; // ticks between unit snapshots
 const FORECAST_TICKS = 100; // 10 s
 const FORECAST_EVERY = 5; // ticks between forecast recomputes
@@ -72,6 +78,9 @@ interface AttackTrack {
 }
 
 export interface BoatForecast {
+  troops: number;
+  /** Observer: one of the biggest boats, labelled */
+  watch: boolean;
   path: number[]; // remaining tiles (sampled)
   land: number; // landing tile
   etaS: number;
@@ -146,16 +155,40 @@ export class TimeWarp {
     return d;
   }
 
-  /** Past events for the timeline, oldest first (last MAX_TICKS). */
+  /** Ticks of history kept: more for observers (see setObserver). */
+  private maxTicks = MAX_TICKS;
+  /** True once the local player is dead, or for spectators. */
+  observer = false;
+  /** Observer: the player whose forecast is shown (null = every big war). */
+  observerFocus: number | null = null;
+
+  /** Seconds the past view can reach at most right now. */
+  maxSeconds(): number {
+    return this.maxTicks / 10;
+  }
+
+  private updateObserver(gameView: GameView): void {
+    const me = gameView.myPlayer();
+    const obs =
+      !gameView.inSpawnPhase() &&
+      (me === null || (!me.isAlive() && me.hasSpawned()));
+    if (obs === this.observer) return;
+    this.observer = obs;
+    this.maxTicks = obs ? OBSERVER_MAX_SECONDS * 10 : MAX_TICKS;
+  }
+
+  /** Past events for the timeline, oldest first. */
   events: TimeEvent[] = [];
   private seenAttacks = new Set<string>();
   private echoSeen = new Map<number, number>();
   private ghostSeen = new Map<number, number>();
+  private loopSeen = new Map<number, number>();
+  private paradoxSeen = new Map<number, number>();
   private ordersSeen = new Set<number>();
 
   pushEvent(e: TimeEvent): void {
     this.events.push(e);
-    const min = e.tick - MAX_TICKS;
+    const min = e.tick - this.maxTicks;
     while (this.events.length > 0 && this.events[0].tick < min) {
       this.events.shift();
     }
@@ -227,6 +260,35 @@ export class TimeWarp {
         });
       }
       this.ghostSeen.set(p.smallID(), gN);
+      const lN = p.loopUses();
+      if (lN > (this.loopSeen.get(p.smallID()) ?? 0)) {
+        const mine = me !== null && p.smallID() === me.smallID();
+        this.pushEvent({
+          tick,
+          icon: "🔁",
+          text: `${mine ? "you" : p.displayName()}: Time Loop`,
+          tone: mine ? "me" : "info",
+        });
+      }
+      this.loopSeen.set(p.smallID(), lN);
+      const px = p.lastParadox();
+      if (
+        px !== null &&
+        px.tick !== (this.paradoxSeen.get(p.smallID()) ?? -1)
+      ) {
+        const other = gameView.playerBySmallID(px.other);
+        const otherName = other.isPlayer() ? other.displayName() : "?";
+        const involved =
+          me !== null &&
+          (p.smallID() === me.smallID() || px.other === me.smallID());
+        this.pushEvent({
+          tick,
+          icon: "⚡",
+          text: `paradox ${p.displayName()} vs ${otherName}: ${px.won ? p.displayName() : otherName} wins`,
+          tone: involved ? "foe" : "info",
+        });
+      }
+      if (px !== null) this.paradoxSeen.set(p.smallID(), px.tick);
     }
   }
 
@@ -252,6 +314,7 @@ export class TimeWarp {
   }
 
   private computeMarkers(gameView: GameView, tick: number): void {
+    this.updateObserver(gameView);
     this.trackEvents(gameView, tick);
     const out: MapMarker[] = [];
     const me = gameView.myPlayer();
@@ -303,6 +366,25 @@ export class TimeWarp {
         text: `👻 ${p.displayName()}`,
         color: "rgba(196,181,253,1)",
         ring: 8,
+      });
+    }
+    // Paradoxes: an unstable field where two timelines clashed
+    for (const p of gameView.playerViews()) {
+      const px = p.lastParadox();
+      if (px === null || tick - px.tick > PARADOX_MARK_TICKS) continue;
+      if (FogOfWar.current?.hidesTile(px.tile)) continue;
+      const other = gameView.playerBySmallID(px.other);
+      const winner = px.won
+        ? p.displayName()
+        : other.isPlayer()
+          ? other.displayName()
+          : "?";
+      out.push({
+        x: px.tile % this.w,
+        y: (px.tile / this.w) | 0,
+        text: `⚡ Paradox: ${winner}`,
+        color: "rgba(250,204,21,1)",
+        ring: 6 + ((tick - px.tick) % 10),
       });
     }
     if (out.length > 0 || this.markers.length > 0) this.markersDirty = true;
@@ -373,7 +455,10 @@ export class TimeWarp {
 
   /** Look `seconds` back (0 = live). */
   setPast(seconds: number): void {
-    const ticks = Math.max(0, Math.min(MAX_TICKS, Math.round(seconds * 10)));
+    const ticks = Math.max(
+      0,
+      Math.min(this.maxTicks, Math.round(seconds * 10)),
+    );
     if (ticks === this.offsetTicks) return;
     this.offsetTicks = ticks;
     this.viewing = false; // rebuilt on the next frame
@@ -496,7 +581,7 @@ export class TimeWarp {
     g.end = this.writePos;
 
     // Drop groups that are too old or were overwritten in the ring
-    const minTick = tick - MAX_TICKS;
+    const minTick = tick - this.maxTicks;
     const minPos = this.writePos - LOG_CAPACITY;
     let drop = 0;
     while (
@@ -537,7 +622,7 @@ export class TimeWarp {
       });
     }
     this.snaps.push({ tick: frame.tick, units });
-    const minTick = frame.tick - MAX_TICKS - SNAPSHOT_EVERY;
+    const minTick = frame.tick - this.maxTicks - SNAPSHOT_EVERY;
     while (this.snaps.length > 1 && this.snaps[0].tick < minTick) {
       this.snaps.shift();
     }
@@ -614,15 +699,28 @@ export class TimeWarp {
   }
 
   private computeForecast(gameView: GameView, frame: FrameData): void {
-    const me = gameView.myPlayer();
+    let me = gameView.myPlayer();
     this.boats = [];
     this.fronts = [];
     this.fcCells.fill(0);
     this.fcDirty = true;
-    if (me === null || !me.isAlive() || gameView.inSpawnPhase()) return;
-    const mySID = me.smallID();
+    if (gameView.inSpawnPhase()) return;
+    // Observer 4D: the followed player's point of view, or every big war
+    let everyone = false;
+    if (this.observer) {
+      me = null;
+      if (this.observerFocus !== null) {
+        const f = gameView.playerBySmallID(this.observerFocus);
+        if (f.isPlayer() && f.isAlive()) me = f;
+        else this.observerFocus = null;
+      }
+      everyone = me === null;
+    }
+    if (!everyone && (me === null || !me.isAlive())) return;
+    const mySID = me === null ? -1 : me.smallID();
     const tiles = frame.tileState;
     const friendly = (sid: number): boolean => {
+      if (me === null) return false;
       if (sid === mySID) return true;
       const p = gameView.playerBySmallID(sid);
       return p.isPlayer() && me.isFriendly(p);
@@ -656,18 +754,40 @@ export class TimeWarp {
         path,
         land,
         etaS: Math.round(((last - idx) * step) / 10),
+        troops: u.troops,
+        watch: false,
         mine,
         hostile:
           !friendly(u.ownerID) && targetOwner !== 0 && friendly(targetOwner),
       });
     }
 
-    // Land fronts: attacks you make or take
+    if (everyone) {
+      // Label the 10 biggest boats on their way
+      [...this.boats]
+        .sort((x, y) => y.troops - x.troops)
+        .slice(0, 10)
+        .forEach((b) => (b.watch = true));
+    }
+
+    // Land fronts: attacks you make or take (observer: the biggest wars)
     const seenAttacks = new Set<string>();
-    const attacks = [
-      ...me.outgoingAttacks().map((a) => ({ a, incoming: false })),
-      ...me.incomingAttacks().map((a) => ({ a, incoming: true })),
-    ];
+    const attacks =
+      me !== null
+        ? [
+            ...me.outgoingAttacks().map((a) => ({ a, incoming: false })),
+            ...me.incomingAttacks().map((a) => ({ a, incoming: true })),
+          ]
+        : gameView
+            .playerViews()
+            .filter((p) => p.isAlive())
+            .sort((x, y) => y.numTilesOwned() - x.numTilesOwned())
+            .slice(0, 12)
+            .flatMap((p) => p.outgoingAttacks())
+            .filter((a) => a.targetID !== 0)
+            .sort((x, y) => y.troops - x.troops)
+            .slice(0, 8)
+            .map((a) => ({ a, incoming: false }));
     for (const { a, incoming } of attacks) {
       if (a.retreating) continue;
       seenAttacks.add(a.id);
@@ -1015,7 +1135,7 @@ export class TimeWarp {
       ctx.beginPath();
       ctx.arc(lx, ly, 4 * dpr, 0, Math.PI * 2);
       ctx.fill();
-      if (b.mine || b.hostile) {
+      if (b.mine || b.hostile || b.watch) {
         this.label(ctx, `⚓ ${b.etaS}s`, lx, ly - 6 * dpr, color, dpr);
       }
     }

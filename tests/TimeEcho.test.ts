@@ -121,11 +121,33 @@ describe("Time Echo", () => {
     expect(a.numTilesOwned()).toBeLessThan(tilesA);
   });
 
-  test("restored land cannot be echoed back by the attacker", () => {
+  test("paradox: echo against an echo, the bigger army wins", () => {
+    for (let y = 0; y < 10; y++) b.conquer(game.ref(19, y));
+    echo(a); // a takes its 10 tiles back
+    expect(game.owner(game.ref(19, 0))).toBe(a);
+    // b echoes the same moment: a clash, b's army is bigger
+    b.addGold(1_000_000n);
+    b.addTroops(90_000);
+    a.addTroops(10_000);
+    const aTroops = a.troops();
+    echo(b);
+    expect(game.owner(game.ref(19, 0))).toBe(b);
+    expect(a.troops()).toBeLessThan(aTroops); // the loser pays troops
+    expect(b.lastParadox()?.won).toBe(true);
+    expect(b.lastParadox()?.tiles).toBe(10);
+  });
+
+  test("paradox: the smaller army loses the clash and keeps nothing", () => {
     for (let y = 0; y < 10; y++) b.conquer(game.ref(19, y));
     echo(a);
     b.addGold(1_000_000n);
-    expect(echo(b).restored).toBe(0);
+    a.addTroops(90_000);
+    b.addTroops(10_000);
+    const bTroops = b.troops();
+    echo(b);
+    expect(game.owner(game.ref(19, 0))).toBe(a);
+    expect(b.troops()).toBeLessThan(bTroops);
+    expect(b.lastParadox()?.won).toBe(false);
   });
 });
 

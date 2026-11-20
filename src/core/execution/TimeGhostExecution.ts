@@ -4,6 +4,7 @@
 // client on the same tick, like any other intent.
 import { Execution, Game, MessageType, Player } from "../game/Game";
 import {
+  ChronoMode,
   GHOST_COOLDOWN_TICKS,
   GHOST_TROOP_PERCENT,
   GHOST_WINDOW_TICKS,
@@ -36,7 +37,7 @@ export class TimeGhostExecution implements Execution {
     let anchor = -1;
     let takerID = 0;
     log.forEachLoss(me.smallID(), ticks - GHOST_WINDOW_TICKS, (tile, taker) => {
-      if (anchor !== -1) return;
+      if (anchor !== -1 || taker === 0) return;
       if (mg.ownerID(tile) !== taker) return;
       if (!mg.isLand(tile) || mg.isImpassable(tile)) return;
       const t = mg.playerBySmallID(taker);
@@ -51,9 +52,9 @@ export class TimeGhostExecution implements Execution {
 
     me.removeGold(ghostCost(me.gold()));
     const army = me.removeTroops(troops);
-    log.paused = true; // the ghost's foothold can't be echoed back
+    log.mode = ChronoMode.Hidden; // the ghost's foothold can't be echoed back
     me.conquer(anchor);
-    log.paused = false;
+    log.mode = ChronoMode.Normal;
     me.markGhost(ticks + GHOST_COOLDOWN_TICKS, {
       tile: anchor,
       tick: ticks,

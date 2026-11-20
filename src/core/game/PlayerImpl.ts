@@ -61,7 +61,7 @@ import {
   bumpTraversalGeneration,
   tileTraversalScratch,
 } from "./TileTraversalScratch";
-import type { DelayedOrderView, GhostView } from "./TimeWarp";
+import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -126,6 +126,8 @@ export class PlayerImpl implements Player {
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
   private _delayedOrders: DelayedOrderView[] = [];
+  private _loopUses = 0;
+  private _lastParadox: ParadoxView | null = null;
   private _ghostUses = 0;
   private _ghostReadyTick = 0;
   private _lastGhost: GhostView | null = null;
@@ -387,6 +389,8 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
       delayedOrders: this._delayedOrders,
+      loopUses: this._loopUses,
+      lastParadox: this._lastParadox,
       ghostUses: this._ghostUses,
       ghostReadyTick: this._ghostReadyTick,
       lastGhost: this._lastGhost,
@@ -1331,6 +1335,22 @@ export class PlayerImpl implements Player {
 
   addCrownTicks(ticks: number): void {
     this._crownTicks += ticks;
+  }
+
+  loopUses(): number {
+    return this._loopUses;
+  }
+
+  markLoop(): void {
+    this._loopUses++;
+  }
+
+  lastParadox(): ParadoxView | null {
+    return this._lastParadox;
+  }
+
+  markParadox(p: ParadoxView): void {
+    this._lastParadox = p;
   }
 
   ghostUses(): number {

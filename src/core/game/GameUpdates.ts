@@ -17,7 +17,7 @@ import {
   WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
-import type { DelayedOrderView, GhostView } from "./TimeWarp";
+import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -252,6 +252,8 @@ export interface PlayerUpdate {
   crownTicks?: number;
   /** TeamStats.Pro OpenFront 4D: Time Echo state (see game/TimeWarp.ts). */
   delayedOrders?: DelayedOrderView[];
+  loopUses?: number;
+  lastParadox?: ParadoxView | null;
   ghostUses?: number;
   ghostReadyTick?: number;
   lastGhost?: GhostView | null;

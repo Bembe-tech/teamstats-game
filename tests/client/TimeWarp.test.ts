@@ -47,6 +47,9 @@ function view(incoming: object[] = []) {
     echoUses: () => 0,
     ghostUses: () => 0,
     lastGhost: () => null,
+    loopUses: () => 0,
+    lastParadox: () => null,
+    hasSpawned: () => true,
     displayName: () => "me",
   };
   return {
@@ -239,5 +242,37 @@ describe("TimeWarp never stops the game", () => {
       tileState: Uint16Array;
     };
     expect(back.tileState[5]).toBe(ME); // history starts at the reset
+  });
+});
+
+describe("Observer 4D", () => {
+  test("a dead player looks back further than 15 s", () => {
+    const warp = new TimeWarp(W, H);
+    const dead = {
+      ...(view() as object),
+      myPlayer: () => ({
+        ...(view() as never as { myPlayer: () => object }).myPlayer(),
+        isAlive: () => false,
+        hasSpawned: () => true,
+        outgoingAttacks: () => [],
+      }),
+    } as never;
+    const tiles = new Uint16Array(W * H);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) tiles[ref(x, y)] = x < 50 ? ME : ENEMY;
+    warp.filter(dead, frame(0, tiles, null));
+    for (let t = 1; t <= 300; t++) {
+      const col = t % 50;
+      const changed: number[] = [];
+      for (let y = 0; y < H; y++) {
+        tiles[ref(col, y)] = t % 2 === 0 ? ENEMY : ME;
+        changed.push(ref(col, y));
+      }
+      warp.filter(dead, frame(t, tiles, changed));
+    }
+    expect(warp.observer).toBe(true);
+    expect(warp.maxSeconds()).toBe(60);
+    expect(warp.availableSeconds()).toBeGreaterThan(15);
+    expect(warp.failed).toBeNull();
   });
 });

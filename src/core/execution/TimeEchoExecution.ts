@@ -2,12 +2,14 @@
 // Runs on every client on the same tick, like any other intent.
 import { Execution, Game, MessageType, Player } from "../game/Game";
 import {
+  ChronoMode,
   ECHO_COOLDOWN_TICKS,
   ECHO_SHIELD_TICKS,
   ECHO_WINDOW_TICKS,
   echoBlock,
   echoCost,
   echoRestoreCap,
+  PARADOX_TROOP_PERCENT,
 } from "../game/TimeWarp";
 
 export class TimeEchoExecution implements Execution {
@@ -36,24 +38,36 @@ export class TimeEchoExecution implements Execution {
     const seen = new Set<number>();
     const tiles: number[] = [];
     const takers = new Map<number, number>(); // smallID -> tiles taken back
-    log.forEachLoss(mine, ticks - ECHO_WINDOW_TICKS, (tile, taker) => {
-      if (tiles.length >= cap || seen.has(tile)) return;
+    // Land the other side took back with its own Echo / Loop: a paradox
+    const clash = new Map<number, number[]>(); // smallID -> tiles
+    log.forEachLoss(mine, ticks - ECHO_WINDOW_TICKS, (tile, taker, kind) => {
+      if (tiles.length >= cap || seen.has(tile) || taker === 0) return;
       seen.add(tile);
       if (mg.ownerID(tile) !== taker) return; // changed hands again since
       if (!mg.isLand(tile) || mg.isImpassable(tile)) return;
       const owner = mg.playerBySmallID(taker);
       if (!owner.isPlayer() || owner.isFriendly(me)) return;
+      if (kind === ChronoMode.Restored) {
+        const list = clash.get(taker) ?? [];
+        list.push(tile);
+        clash.set(taker, list);
+        return;
+      }
       tiles.push(tile);
       takers.set(taker, (takers.get(taker) ?? 0) + 1);
     });
 
     me.removeGold(echoCost(me.gold()));
-    log.paused = true;
+    log.mode = ChronoMode.Restored;
     // Oldest loss last, so the land comes back from the inside out
     for (let i = tiles.length - 1; i >= 0; i--) me.conquer(tiles[i]);
-    log.paused = false;
+    let won = 0;
+    for (const [other, list] of clash) {
+      won += resolveParadox(mg, me, other, list, ticks);
+    }
+    log.mode = ChronoMode.Normal;
     me.markEcho(ticks, ticks + ECHO_COOLDOWN_TICKS, ticks + ECHO_SHIELD_TICKS);
-    this.restored = tiles.length;
+    this.restored = tiles.length + won;
 
     mg.displayMessage(
       "events_display.time_echo_used",
@@ -84,4 +98,56 @@ export class TimeEchoExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+}
+
+/**
+ * Two Time Echoes / Loops claim the same land at the same moment: the
+ * bigger army wins it, the other side loses PARADOX_TROOP_PERCENT of its
+ * troops. Returns the tiles `me` got. Called with the log in Restored mode.
+ */
+export function resolveParadox(
+  mg: Game,
+  me: Player,
+  otherID: number,
+  tiles: number[],
+  ticks: number,
+): number {
+  const other = mg.playerBySmallID(otherID);
+  if (!other.isPlayer()) return 0;
+  const won = me.troops() > other.troops();
+  const loser = won ? other : me;
+  loser.removeTroops(
+    Math.floor((loser.troops() * PARADOX_TROOP_PERCENT) / 100),
+  );
+  let got = 0;
+  if (won) {
+    for (const t of tiles) {
+      if (mg.ownerID(t) === otherID) {
+        me.conquer(t);
+        got++;
+      }
+    }
+  }
+  me.markParadox({
+    tile: tiles[0],
+    tick: ticks,
+    other: otherID,
+    won,
+    tiles: tiles.length,
+  });
+  for (const p of [me, other]) {
+    mg.displayMessage(
+      "events_display.time_paradox",
+      MessageType.NUKE_INBOUND,
+      p.id(),
+      undefined,
+      {
+        winner: (won ? me : other).displayName(),
+        loser: (won ? other : me).displayName(),
+        tiles: tiles.length,
+        pct: PARADOX_TROOP_PERCENT,
+      },
+    );
+  }
+  return got;
 }

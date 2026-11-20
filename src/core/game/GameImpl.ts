@@ -774,13 +774,14 @@ export class GameImpl implements Game {
       throw Error(`cannot conquer impassable terrain`);
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
+    // OpenFront 4D: every change of hands, empty land (0) included
+    this._chronoLog?.record(
+      this._ticks,
+      tile,
+      previousOwner.isPlayer() ? previousOwner.smallID() : 0,
+      owner.smallID(),
+    );
     if (previousOwner.isPlayer()) {
-      this._chronoLog?.record(
-        this._ticks,
-        tile,
-        previousOwner.smallID(),
-        owner.smallID(),
-      );
       previousOwner._lastTileChange = this._ticks;
       previousOwner._tileChangeVersion++;
       previousOwner._tiles.delete(tile);
@@ -805,6 +806,7 @@ export class GameImpl implements Game {
     }
 
     const previousOwner = this.owner(tile) as PlayerImpl;
+    this._chronoLog?.record(this._ticks, tile, previousOwner.smallID(), 0);
     previousOwner._lastTileChange = this._ticks;
     previousOwner._tileChangeVersion++;
     previousOwner._tiles.delete(tile);

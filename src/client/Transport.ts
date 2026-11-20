@@ -161,6 +161,9 @@ export class SendEmbargoAllIntentEvent implements GameEvent {
 /** TeamStats.Pro OpenFront 4D: use the Time Echo. */
 export class SendTimeEchoIntentEvent implements GameEvent {}
 
+/** TeamStats.Pro OpenFront 4D: use the Time Loop. */
+export class SendTimeLoopIntentEvent implements GameEvent {}
+
 /** TeamStats.Pro OpenFront 4D: raise a ghost army. */
 export class SendTimeGhostIntentEvent implements GameEvent {}
 
@@ -330,6 +333,9 @@ export class Transport {
     this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
     this.subscribe(SendTimeEchoIntentEvent, () =>
       this.sendIntent({ type: "time_echo" }),
+    );
+    this.subscribe(SendTimeLoopIntentEvent, () =>
+      this.sendIntent({ type: "time_loop" }),
     );
     this.subscribe(SendTimeGhostIntentEvent, () =>
       this.sendIntent({ type: "time_ghost" }),

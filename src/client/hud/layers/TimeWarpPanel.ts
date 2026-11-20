@@ -12,18 +12,23 @@ import {
   GHOST_MAX_USES,
   GHOST_TROOP_PERCENT,
   GHOST_WINDOW_TICKS,
+  LOOP_EARLIEST_TICK_AFTER_SPAWN,
+  LOOP_TROOP_PERCENT,
+  LOOP_WINDOW_TICKS,
   ORDER_MAX_PENDING,
-  PAST_VIEW_MAX_SECONDS,
   echoBlock,
   echoCost,
   ghostBlock,
   ghostCost,
+  loopBlock,
+  loopCost,
 } from "../../../core/game/TimeWarp";
 import { Controller } from "../../Controller";
 import { TimeWarp } from "../../TimeWarp";
 import {
   SendTimeEchoIntentEvent,
   SendTimeGhostIntentEvent,
+  SendTimeLoopIntentEvent,
 } from "../../Transport";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
@@ -92,7 +97,7 @@ export class TimeWarpPanel extends LitElement implements Controller {
         4D
       </button>`;
     }
-    const avail = Math.min(PAST_VIEW_MAX_SECONDS, warp.availableSeconds());
+    const avail = Math.min(warp.maxSeconds(), warp.availableSeconds());
     this.pastS = warp.pastSeconds(); // the timeline can change it too
     if (this.pastS > 0) this.lastPastS = this.pastS;
     const viewing = this.pastS > 0;
@@ -118,9 +123,13 @@ export class TimeWarpPanel extends LitElement implements Controller {
               ${translateText("time_warp.view_off")}
             </div>`
           : this.renderViews(warp, avail, viewing)}
+        ${warp.observer && warp.failed === null
+          ? this.renderObserver(warp)
+          : nothing}
         ${me && me.isAlive() ? this.renderOrders(warp) : nothing}
         ${me ? this.renderEcho() : nothing}
         ${me ? this.renderGhost(warp) : nothing}
+        ${me ? this.renderLoop() : nothing}
       </div>
     `;
   }
@@ -231,6 +240,127 @@ export class TimeWarpPanel extends LitElement implements Controller {
             </div>`
           : nothing}
       </div>
+    `;
+  }
+
+  /** Observer 4D: follow a player's forecast (top 12 by land). */
+  private renderObserver(warp: TimeWarp) {
+    const top = this.game
+      .playerViews()
+      .filter((p) => p.isAlive())
+      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned())
+      .slice(0, 12);
+    return html`
+      <div class="flex flex-col gap-1 border-t border-gray-700 pt-1">
+        <div class="font-bold text-[11px]">
+          👁 ${translateText("time_warp.observer")}
+        </div>
+        <select
+          class="bg-gray-800 rounded px-1 py-0.5 text-[11px]"
+          @change=${(e: Event) => {
+            const v = (e.target as HTMLSelectElement).value;
+            warp.observerFocus = v === "" ? null : Number(v);
+          }}
+        >
+          <option value="" ?selected=${warp.observerFocus === null}>
+            ${translateText("time_warp.observer_all")}
+          </option>
+          ${top.map(
+            (p) =>
+              html`<option
+                value=${p.smallID()}
+                ?selected=${warp.observerFocus === p.smallID()}
+              >
+                ${p.displayName()}
+              </option>`,
+          )}
+        </select>
+        <div class="text-[10px] text-gray-400 leading-tight">
+          ${translateText("time_warp.observer_hint", {
+            s: warp.maxSeconds(),
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  private loopSentAt = -1000;
+  private loopConfirm = false;
+
+  private renderLoop() {
+    const me = this.game.myPlayer()!;
+    const now = this.game.ticks();
+    const gold = me.gold();
+    const block = loopBlock(
+      true,
+      me.isAlive(),
+      this.game.inSpawnPhase(),
+      this.game.ticksSinceStart(),
+      me.loopUses(),
+      gold,
+    );
+    if (!me.isAlive() || block === "spawn") return nothing;
+    const pending = now - this.loopSentAt < 20;
+    let status = "";
+    switch (block) {
+      case "ok":
+        status = translateText("time_warp.loop_cost", {
+          gold: renderNumber(Number(loopCost(gold))),
+          pct: LOOP_TROOP_PERCENT,
+        });
+        break;
+      case "too_early":
+        status = translateText("time_warp.echo_too_early", {
+          s: Math.ceil(
+            (LOOP_EARLIEST_TICK_AFTER_SPAWN - this.game.ticksSinceStart()) / 10,
+          ),
+        });
+        break;
+      case "gold":
+        status = translateText("time_warp.loop_gold");
+        break;
+      case "no_uses":
+        status = translateText("time_warp.loop_used");
+        break;
+    }
+    const ok = block === "ok" && !pending;
+    return html`
+      <button
+        class="rounded px-2 py-1 text-left ${ok
+          ? this.loopConfirm
+            ? "bg-red-700 hover:bg-red-600"
+            : "bg-teal-800 hover:bg-teal-700"
+          : "bg-gray-700 opacity-60 cursor-not-allowed"}"
+        ?disabled=${!ok}
+        title=${translateText("time_warp.loop_hint", {
+          s: LOOP_WINDOW_TICKS / 10,
+        })}
+        @click=${() => {
+          // Once a game: the first click asks, the second one loops
+          if (!this.loopConfirm) {
+            this.loopConfirm = true;
+            setTimeout(() => {
+              this.loopConfirm = false;
+              this.requestUpdate();
+            }, 4000);
+            this.requestUpdate();
+            return;
+          }
+          this.loopConfirm = false;
+          this.loopSentAt = this.game.ticks();
+          this.eventBus.emit(new SendTimeLoopIntentEvent());
+        }}
+      >
+        🔁
+        ${this.loopConfirm
+          ? translateText("time_warp.loop_confirm")
+          : translateText("time_warp.loop", { s: LOOP_WINDOW_TICKS / 10 })}
+      </button>
+      ${status
+        ? html`<div class="text-[10px] text-gray-300 leading-tight">
+            ${status}
+          </div>`
+        : nothing}
     `;
   }
 

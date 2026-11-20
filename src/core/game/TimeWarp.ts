@@ -100,6 +100,56 @@ export interface GhostView {
   target: number;
 }
 
+// ── Time Loop: once a game, your land goes back to how it was ──
+export const LOOP_WINDOW_TICKS = 200;
+export const LOOP_MAX_USES = 1;
+/** Unlocked this long after the spawn phase (no loop in the land grab). */
+export const LOOP_EARLIEST_TICK_AFTER_SPAWN = 1800;
+export const LOOP_GOLD_PERCENT = 40n;
+export const LOOP_MIN_GOLD = 150_000n;
+export const LOOP_TROOP_PERCENT = 20;
+
+export function loopCost(gold: bigint): bigint {
+  const pct = (gold * LOOP_GOLD_PERCENT) / 100n;
+  return pct > LOOP_MIN_GOLD ? pct : LOOP_MIN_GOLD;
+}
+
+export function loopBlock(
+  enabled: boolean,
+  alive: boolean,
+  inSpawnPhase: boolean,
+  ticksSinceSpawnPhase: number,
+  used: number,
+  gold: bigint,
+): EchoBlock {
+  if (!enabled) return "disabled";
+  if (!alive) return "dead";
+  if (inSpawnPhase) return "spawn";
+  if (ticksSinceSpawnPhase < LOOP_EARLIEST_TICK_AFTER_SPAWN) return "too_early";
+  if (used >= LOOP_MAX_USES) return "no_uses";
+  if (gold < LOOP_MIN_GOLD) return "gold";
+  return "ok";
+}
+
+// ── Paradox: two echoes in the same moment ──
+// When your Time Echo / Loop would take back land that another player just
+// took back with their own Echo / Loop, the two timelines clash. The bigger
+// army wins the contested land; the loser loses PARADOX_TROOP_PERCENT of
+// their troops.
+export const PARADOX_TROOP_PERCENT = 15;
+export const PARADOX_MARK_TICKS = 80;
+
+/** The newest paradox a player started, as every client sees it. */
+export interface ParadoxView {
+  tile: number;
+  tick: number;
+  /** smallID of the other side */
+  other: number;
+  /** true when the player who started it won */
+  won: boolean;
+  tiles: number;
+}
+
 // ── Delayed orders (attack / boat / build that fires later) ──
 export const ORDER_MIN_DELAY_TICKS = 30; // 3 s
 export const ORDER_MAX_DELAY_TICKS = 600; // 60 s
@@ -161,49 +211,79 @@ export function echoBlock(
   return "ok";
 }
 
+/** How ChronoLog records the land changes happening right now. */
+export enum ChronoMode {
+  Normal = 0,
+  /** Land given back by an echo or a loop: another echo hits a paradox */
+  Restored = 1,
+  /** Not recorded at all (a ghost's foothold) */
+  Hidden = 2,
+}
+
 /**
- * The simulation's memory of who took which tile from whom, for the last
- * ECHO_WINDOW_TICKS. A fixed ring of typed arrays: when a huge war conquers
- * more than CAPACITY tiles inside the window, the oldest entries drop out
- * (the same on every client, so still deterministic).
+ * The simulation's memory of who took which tile from whom (0 = empty land),
+ * for the last seconds. A fixed ring of typed arrays: when a huge war
+ * changes more than CAPACITY tiles inside a window, the oldest entries drop
+ * out (the same on every client, so still deterministic).
  */
 export class ChronoLog {
-  static readonly CAPACITY = 1 << 18; // 262k entries, 3 MB
+  static readonly CAPACITY = 1 << 20; // 1M entries, 13 MB
   private readonly tick = new Int32Array(ChronoLog.CAPACITY);
   private readonly tile = new Int32Array(ChronoLog.CAPACITY);
   private readonly from = new Uint16Array(ChronoLog.CAPACITY);
   private readonly to = new Uint16Array(ChronoLog.CAPACITY);
+  private readonly kind = new Uint8Array(ChronoLog.CAPACITY);
   private head = 0; // next write
   private size = 0;
-  /** True while an echo gives land back: those changes are not echoable. */
-  paused = false;
+  mode: ChronoMode = ChronoMode.Normal;
 
   record(tick: number, tile: number, fromSmallID: number, toSmallID: number) {
-    if (this.paused) return;
+    if (this.mode === ChronoMode.Hidden) return;
     const i = this.head;
     this.tick[i] = tick;
     this.tile[i] = tile;
     this.from[i] = fromSmallID;
     this.to[i] = toSmallID;
+    this.kind[i] = this.mode;
     this.head = (i + 1) & (ChronoLog.CAPACITY - 1);
     if (this.size < ChronoLog.CAPACITY) this.size++;
   }
 
   /**
-   * Newest first: every tile `loser` lost since `sinceTick`, with who took it.
-   * Stops at the first entry older than sinceTick.
+   * Newest first: every tile `loser` lost since `sinceTick`, with who took it
+   * and whether it was taken back by a Time Echo / Time Loop (Restored).
    */
   forEachLoss(
     loser: number,
     sinceTick: number,
-    cb: (tile: number, taker: number) => void,
+    cb: (tile: number, taker: number, kind: ChronoMode) => void,
   ): void {
     let i = this.head;
     for (let n = 0; n < this.size; n++) {
       i = (i - 1) & (ChronoLog.CAPACITY - 1);
       if (this.tick[i] < sinceTick) return;
-      if (this.from[i] === loser) cb(this.tile[i], this.to[i]);
+      if (this.from[i] === loser) cb(this.tile[i], this.to[i], this.kind[i]);
     }
+  }
+
+  /** Newest first: every change since `sinceTick`. */
+  forEachSince(
+    sinceTick: number,
+    cb: (tile: number, from: number, to: number) => void,
+  ): void {
+    let i = this.head;
+    for (let n = 0; n < this.size; n++) {
+      i = (i - 1) & (ChronoLog.CAPACITY - 1);
+      if (this.tick[i] < sinceTick) return;
+      cb(this.tile[i], this.from[i], this.to[i]);
+    }
+  }
+
+  /** Oldest tick still in the log (Infinity when empty). */
+  oldestTick(): number {
+    if (this.size === 0) return Infinity;
+    const i = (this.head - this.size) & (ChronoLog.CAPACITY - 1);
+    return this.tick[i];
   }
 
   entries(): number {
