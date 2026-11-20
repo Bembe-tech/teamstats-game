@@ -6,6 +6,7 @@ import { Execution, Game, MessageType, Player } from "../game/Game";
 import {
   ChronoMode,
   GHOST_COOLDOWN_TICKS,
+  GHOST_POWER,
   GHOST_TROOP_PERCENT,
   GHOST_WINDOW_TICKS,
   ghostBlock,
@@ -61,9 +62,16 @@ export class TimeGhostExecution implements Execution {
       target: takerID,
     });
     this.anchor = anchor;
-    // removeTroops = false: the army was taken above; like a boat landing,
-    // survivors of a retreat go home
-    mg.addExecution(new AttackExecution(army, me, taker.id(), anchor, false));
+    // removeTroops = false: the army was paid above; ghosts never go home
+    mg.addExecution(
+      new AttackExecution(
+        army * GHOST_POWER,
+        me,
+        taker.id(),
+        anchor,
+        false,
+      ).asGhost(),
+    );
 
     mg.displayMessage(
       "events_display.time_ghost_used",

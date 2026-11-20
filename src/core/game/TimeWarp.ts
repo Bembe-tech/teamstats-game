@@ -56,12 +56,15 @@ export function echoRestoreCap(currentTiles: number): number {
 // ── Ghosts of the past ──
 // A ghost army rises on land you lost in the last GHOST_WINDOW_TICKS (the
 // newest lost tile the taker still holds) and attacks the taker from there.
-// It costs GHOST_TROOP_PERCENT of your troops (they become the ghost army)
-// and GHOST_GOLD_PERCENT of your gold (at least GHOST_MIN_GOLD).
+// It costs GHOST_TROOP_PERCENT of your troops and GHOST_GOLD_PERCENT of your
+// gold (at least GHOST_MIN_GOLD); the ghosts fight with GHOST_POWER times the
+// troops paid, and fade when the attack ends (no survivors come home).
 export const GHOST_WINDOW_TICKS = 150;
 export const GHOST_MAX_USES = 2;
 export const GHOST_COOLDOWN_TICKS = 1200;
-export const GHOST_TROOP_PERCENT = 25;
+export const GHOST_TROOP_PERCENT = 30;
+/** The ghost army fights with this many times the troops paid for it. */
+export const GHOST_POWER = 3;
 export const GHOST_GOLD_PERCENT = 10n;
 export const GHOST_MIN_GOLD = 50_000n;
 /** How long every client marks a ghost's rising spot on the map. */
@@ -107,7 +110,7 @@ export const LOOP_MAX_USES = 1;
 export const LOOP_EARLIEST_TICK_AFTER_SPAWN = 1800;
 export const LOOP_GOLD_PERCENT = 40n;
 export const LOOP_MIN_GOLD = 150_000n;
-export const LOOP_TROOP_PERCENT = 20;
+export const LOOP_TROOP_PERCENT = 30;
 
 export function loopCost(gold: bigint): bigint {
   const pct = (gold * LOOP_GOLD_PERCENT) / 100n;

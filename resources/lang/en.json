@@ -2151,7 +2151,7 @@
     "ghost": "Ghost army",
     "ghost_cost": "Costs {gold} gold and {pct}% of your troops",
     "ghost_gold": "Needs at least 50K gold",
-    "ghost_hint": "Your army from the past rises on land you lost in the last {s} s and strikes the player who took it, from behind their front ({pct}% of your troops become the ghosts)",
+    "ghost_hint": "Your army from the past rises on land you lost in the last {s} s and strikes the player who took it from behind their front. {pct}% of your troops go in and fight three times as hard; the ghosts fade when the attack ends.",
     "ghost_nothing": "No land lost in the last {s} s to rise on",
     "hide": "Hide",
     "loop": "Time Loop ({s} s)",

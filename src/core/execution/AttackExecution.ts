@@ -48,6 +48,15 @@ export class AttackExecution implements Execution {
     private removeTroops: boolean = true,
   ) {}
 
+  /** TeamStats.Pro OpenFront 4D: set on a ghost army (see TimeGhostExecution). */
+  private ghost = false;
+
+  /** Marks this attack as a ghost army: its survivors fade instead of going home. */
+  asGhost(): this {
+    this.ghost = true;
+    return this;
+  }
+
   public targetID(): PlayerID | null {
     return this._targetID;
   }
@@ -238,7 +247,8 @@ export class AttackExecution implements Execution {
     }
 
     const survivors = this.attack.troops() - deaths;
-    this._owner.addTroops(survivors);
+    // TeamStats.Pro OpenFront 4D: a ghost army fades, nobody comes home
+    if (!this.ghost) this._owner.addTroops(survivors);
     this.attack.delete();
     this.active = false;
 
