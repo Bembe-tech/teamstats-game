@@ -28,6 +28,7 @@ import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TimeEchoExecution } from "./TimeEchoExecution";
 import { TimeGhostExecution } from "./TimeGhostExecution";
+import { ThroneOrderExecution } from "./ThroneOrderExecution";
 import { TimeLoopExecution } from "./TimeLoopExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -152,6 +153,8 @@ export class Executor {
         return new TimeLoopExecution(player);
       case "time_ghost":
         return new TimeGhostExecution(player);
+      case "throne":
+        return new ThroneOrderExecution(player, intent.action, intent.percent);
       case "delayed_order":
         return new DelayedOrderExecution(
           player,

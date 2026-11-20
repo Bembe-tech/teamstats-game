@@ -59,7 +59,8 @@ export type Intent =
   | TimeEchoIntent
   | DelayedOrderIntent
   | TimeGhostIntent
-  | TimeLoopIntent;
+  | TimeLoopIntent
+  | ThroneIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -613,6 +614,11 @@ export const GameConfigSchema = z.object({
   // TeamStats.Pro "King of the Hill": crown time decides the winner after 30 min
   kingOfTheHill: z.boolean().nullable().optional(),
   kingOfTheHillMinutes: zb.uint().nullable().optional(),
+  // TeamStats.Pro "King of the Hill 2": the powered throne (game/Throne.ts).
+  // Reign minutes needed to win and the garrison share of the army (%)
+  kingOfTheHill2: z.boolean().nullable().optional(),
+  kingOfTheHill2Minutes: zb.uint({ min: 1, max: 60 }).nullable().optional(),
+  kingOfTheHill2ArmyShare: zb.uint({ min: 5, max: 90 }).nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
@@ -890,6 +896,15 @@ export const DelayedOrderIntentSchema = z.object({
 });
 export type DelayedOrderIntent = z.infer<typeof DelayedOrderIntentSchema>;
 
+// TeamStats.Pro "King of the Hill 2": send `percent` of the troops to the
+// throne garrison, or bring the garrison home (see ThroneOrderExecution)
+export const ThroneIntentSchema = z.object({
+  type: z.literal("throne"),
+  action: z.enum(["send", "withdraw"]),
+  percent: zb.uint({ max: 100 }),
+});
+export type ThroneIntent = z.infer<typeof ThroneIntentSchema>;
+
 export const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -920,6 +935,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   DelayedOrderIntentSchema,
   TimeGhostIntentSchema,
   TimeLoopIntentSchema,
+  ThroneIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

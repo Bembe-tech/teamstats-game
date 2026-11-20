@@ -63,6 +63,7 @@ import {
   tileTraversalScratch,
 } from "./TileTraversalScratch";
 import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
+import type { ThroneView } from "./Throne";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -126,6 +127,7 @@ export class PlayerImpl implements Player {
   /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
+  private _throne: ThroneView | null = null;
   private _delayedOrders: DelayedOrderView[] = [];
   private _loopUses = 0;
   private _lastParadox: ParadoxView | null = null;
@@ -389,6 +391,7 @@ export class PlayerImpl implements Player {
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
+      throne: this._throne,
       delayedOrders: this._delayedOrders,
       loopUses: this._loopUses,
       lastParadox: this._lastParadox,
@@ -1336,6 +1339,19 @@ export class PlayerImpl implements Player {
 
   addCrownTicks(ticks: number): void {
     this._crownTicks += ticks;
+  }
+
+  throne(): ThroneView | null {
+    return this._throne;
+  }
+
+  /** Replace (never mutate) so the update diff sees the change. */
+  setThrone(view: ThroneView | null): void {
+    this._throne = view;
+  }
+
+  throneGarrison(): number {
+    return this._throne?.garrison ?? 0;
   }
 
   loopUses(): number {

@@ -122,6 +122,8 @@ const DEFAULT_OPTIONS = {
   homeEconomy: false,
   kingOfTheHill: false,
   kingOfTheHillMinutes: undefined as number | undefined,
+  kingOfTheHill2: false,
+  kingOfTheHill2Minutes: undefined as number | undefined,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
   overtime: false,
@@ -219,6 +221,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private kingOfTheHill: boolean = DEFAULT_OPTIONS.kingOfTheHill;
   @state() private kingOfTheHillMinutes: number | undefined =
     DEFAULT_OPTIONS.kingOfTheHillMinutes;
+  @state() private kingOfTheHill2: boolean = DEFAULT_OPTIONS.kingOfTheHill2;
+  @state() private kingOfTheHill2Minutes: number | undefined =
+    DEFAULT_OPTIONS.kingOfTheHill2Minutes;
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
@@ -492,6 +497,21 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleOvertimeMinutesKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
+        .labelKey=${"game_settings.king_of_the_hill_2"}
+        .checked=${this.kingOfTheHill2}
+        .inputMin=${1}
+        .inputMax=${60}
+        .inputStep=${1}
+        .inputValue=${this.kingOfTheHill2Minutes}
+        .inputAriaLabel=${translateText("game_settings.king_of_the_hill_2")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleKoth2Toggle}
+        .onInput=${this.handleKoth2MinutesInput}
+        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
         .labelKey=${"game_settings.overtime"}
         .checked=${this.overtime}
         .inputMin=${1}
@@ -666,6 +686,7 @@ export class SinglePlayerModal extends BaseModal {
       this.airports !== DEFAULT_OPTIONS.airports ||
       this.homeEconomy !== DEFAULT_OPTIONS.homeEconomy ||
       this.kingOfTheHill !== DEFAULT_OPTIONS.kingOfTheHill ||
+      this.kingOfTheHill2 !== DEFAULT_OPTIONS.kingOfTheHill2 ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
@@ -749,6 +770,8 @@ export class SinglePlayerModal extends BaseModal {
     this.homeEconomy = DEFAULT_OPTIONS.homeEconomy;
     this.kingOfTheHill = DEFAULT_OPTIONS.kingOfTheHill;
     this.kingOfTheHillMinutes = DEFAULT_OPTIONS.kingOfTheHillMinutes;
+    this.kingOfTheHill2 = DEFAULT_OPTIONS.kingOfTheHill2;
+    this.kingOfTheHill2Minutes = DEFAULT_OPTIONS.kingOfTheHill2Minutes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
     this.overtime = DEFAULT_OPTIONS.overtime;
@@ -944,6 +967,7 @@ export class SinglePlayerModal extends BaseModal {
     value: number | string | undefined,
   ) => {
     this.kingOfTheHill = checked;
+    if (checked) this.kingOfTheHill2 = false;
     this.kingOfTheHillMinutes = toOptionalNumber(value);
   };
 
@@ -955,6 +979,26 @@ export class SinglePlayerModal extends BaseModal {
     });
     if (value === undefined) return;
     this.kingOfTheHillMinutes = value;
+  };
+
+  // TeamStats.Pro King of the Hill 2: on/off + reign minutes to win
+  private handleKoth2Toggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.kingOfTheHill2 = checked;
+    if (checked) this.kingOfTheHill = false;
+    this.kingOfTheHill2Minutes = toOptionalNumber(value);
+  };
+
+  private handleKoth2MinutesInput = (e: Event) => {
+    const value = parseBoundedIntegerFromInput(e.target as HTMLInputElement, {
+      min: 1,
+      max: 60,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) return;
+    this.kingOfTheHill2Minutes = value;
   };
 
   private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
@@ -1275,6 +1319,12 @@ export class SinglePlayerModal extends BaseModal {
                   ? {
                       kingOfTheHill: true,
                       kingOfTheHillMinutes: this.kingOfTheHillMinutes ?? 30,
+                    }
+                  : {}),
+                ...(this.kingOfTheHill2
+                  ? {
+                      kingOfTheHill2: true,
+                      kingOfTheHill2Minutes: this.kingOfTheHill2Minutes ?? 5,
                     }
                   : {}),
                 ...(this.doomsdayClock

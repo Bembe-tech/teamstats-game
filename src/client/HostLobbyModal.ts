@@ -109,6 +109,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private homeEconomy: boolean = false;
   @state() private kingOfTheHill: boolean = false;
   @state() private kingOfTheHillMinutes: number | undefined = undefined;
+  @state() private kingOfTheHill2: boolean = false;
+  @state() private kingOfTheHill2Minutes: number = 5;
+  @state() private kingOfTheHill2ArmyShare: number = 30;
   // TeamStats.Pro: players the host moved to a team
   @state() private teamPins: { clientID: string; team: number }[] = [];
   // TeamStats.Pro: why creating the lobby failed (shown in the side panel)
@@ -511,6 +514,7 @@ export class HostLobbyModal extends BaseModal {
           "The biggest player wears the crown and collects crown time. When the time runs out, whoever held the crown longest wins (in teams: the team's total). Normal map-control wins are off.",
           () => {
             this.kingOfTheHill = !this.kingOfTheHill;
+            if (this.kingOfTheHill) this.kingOfTheHill2 = false;
             if (this.kingOfTheHill && !this.kingOfTheHillMinutes) {
               this.kingOfTheHillMinutes = 30;
             }
@@ -529,6 +533,42 @@ export class HostLobbyModal extends BaseModal {
                 />
                 min</label
               >`
+            : nothing,
+        )}
+        ${card(
+          this.kingOfTheHill2,
+          "🏰",
+          "King of the Hill 2",
+          "A throne stands on the land nearest the map center (the middle island on Surrounded-like maps). Own a tile in the throne zone and station troops there: the side with the biggest garrison reigns. The reign clock only runs while the garrison is a big part of your whole army and you pay gold every second, and the longer you reign the more gold and troops each second costs. A bigger garrison takes the throne over. First to reach the reign time wins (teams share garrison and reign). Land size does not win.",
+          () => {
+            this.kingOfTheHill2 = !this.kingOfTheHill2;
+            if (this.kingOfTheHill2) this.kingOfTheHill = false;
+            this.putGameConfig();
+          },
+          this.kingOfTheHill2
+            ? html`<label class="ts-mode-field"
+                  >Reign to win
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    .value=${String(this.kingOfTheHill2Minutes)}
+                    @input=${this.handleKoth2MinutesInput}
+                    @keydown=${this.handleOvertimeMinutesKeyDown}
+                  />
+                  min</label
+                ><label class="ts-mode-field"
+                  >Garrison at least
+                  <input
+                    type="number"
+                    min="5"
+                    max="90"
+                    .value=${String(this.kingOfTheHill2ArmyShare)}
+                    @input=${this.handleKoth2ShareInput}
+                    @keydown=${this.handleOvertimeMinutesKeyDown}
+                  />
+                  % of army</label
+                >`
             : nothing,
         )}
         ${card(
@@ -1395,6 +1435,9 @@ export class HostLobbyModal extends BaseModal {
     this.homeEconomy = false;
     this.kingOfTheHill = false;
     this.kingOfTheHillMinutes = undefined;
+    this.kingOfTheHill2 = false;
+    this.kingOfTheHill2Minutes = 5;
+    this.kingOfTheHill2ArmyShare = 30;
     this.teamPins = [];
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
@@ -1617,6 +1660,29 @@ export class HostLobbyModal extends BaseModal {
     });
     if (value === undefined) return;
     this.kingOfTheHillMinutes = value;
+    this.putGameConfig();
+  };
+
+  // TeamStats.Pro King of the Hill 2: reign minutes + garrison share
+  private handleKoth2MinutesInput = (e: Event) => {
+    const value = parseBoundedIntegerFromInput(e.target as HTMLInputElement, {
+      min: 1,
+      max: 60,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) return;
+    this.kingOfTheHill2Minutes = value;
+    this.putGameConfig();
+  };
+
+  private handleKoth2ShareInput = (e: Event) => {
+    const value = parseBoundedIntegerFromInput(e.target as HTMLInputElement, {
+      min: 5,
+      max: 90,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) return;
+    this.kingOfTheHill2ArmyShare = value;
     this.putGameConfig();
   };
 
@@ -2022,6 +2088,13 @@ export class HostLobbyModal extends BaseModal {
       kingOfTheHill: this.kingOfTheHill ? true : null,
       kingOfTheHillMinutes: this.kingOfTheHill
         ? (this.kingOfTheHillMinutes ?? 30)
+        : null,
+      kingOfTheHill2: this.kingOfTheHill2 ? true : null,
+      kingOfTheHill2Minutes: this.kingOfTheHill2
+        ? this.kingOfTheHill2Minutes
+        : null,
+      kingOfTheHill2ArmyShare: this.kingOfTheHill2
+        ? this.kingOfTheHill2ArmyShare
         : null,
       teamPins: this.teamPins,
       hostCheats: this.hostCheatsEnabled

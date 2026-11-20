@@ -77,6 +77,7 @@ describe("createRenderer", () => {
         gameConfig: () => ({}),
         isReplay: () => false,
         timeWarp: () => false,
+        kingOfTheHill2: () => false,
       }),
     } as unknown as GameView;
     const view = {} as MapRenderer;

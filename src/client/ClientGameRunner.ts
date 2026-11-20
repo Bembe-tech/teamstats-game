@@ -59,6 +59,7 @@ import { versionedPathForMismatchedGame } from "./ServerList";
 import { SiloSelect } from "./SiloSelect";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { ThroneOverlay } from "./ThroneOverlay";
 import { TimeWarp } from "./TimeWarp";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -603,6 +604,11 @@ function mountWebGLFrameLoop(
     : null;
   AirOverlay.current = airOverlay;
   applyAirportsUi(gameView.config().airports());
+  // TeamStats.Pro: King of the Hill 2 throne ring + crown on the map
+  const throneOverlay = gameView.config().kingOfTheHill2()
+    ? new ThroneOverlay(gameView)
+    : null;
+  ThroneOverlay.current = throneOverlay;
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
@@ -619,6 +625,7 @@ function mountWebGLFrameLoop(
     fog?.drawOverlay(glCanvas, centerX, centerY, scale);
     timeWarp?.drawOverlay(glCanvas, centerX, centerY, scale);
     airOverlay?.drawOverlay(glCanvas, centerX, centerY, scale);
+    throneOverlay?.drawOverlay(glCanvas, centerX, centerY, scale);
     siloSelect?.drawOverlay(glCanvas, centerX, centerY, scale);
     // Invoke the WebGL renderer's frame callback synchronously, with the just-
     // updated camera state. The callback re-arms itself via captureRaf, so
@@ -666,6 +673,8 @@ function mountWebGLFrameLoop(
     resizeObs.disconnect();
     siloSelect?.dispose();
     airOverlay?.dispose();
+    throneOverlay?.dispose();
+    if (ThroneOverlay.current === throneOverlay) ThroneOverlay.current = null;
     if (AirOverlay.current === airOverlay) AirOverlay.current = null;
     if (SiloSelect.current === siloSelect) SiloSelect.current = null;
   };

@@ -42,6 +42,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { ThronePanel } from "./layers/ThronePanel";
 import { TimeWarpPanel } from "./layers/TimeWarpPanel";
 import { TimeWarpTimeline } from "./layers/TimeWarpTimeline";
 import { TutorialPanel } from "./layers/TutorialPanel";
@@ -336,6 +337,20 @@ export function createRenderer(
   } else {
     document.querySelector("time-warp-panel")?.remove();
     document.querySelector("time-warp-timeline")?.remove();
+  }
+
+  // TeamStats.Pro King of the Hill 2 throne panel
+  if (game.config().kingOfTheHill2()) {
+    let panel = document.querySelector("throne-panel") as ThronePanel;
+    if (!panel) {
+      panel = new ThronePanel();
+      document.body.appendChild(panel);
+    }
+    panel.game = game;
+    panel.eventBus = eventBus;
+    timeWarpLayers.push(panel);
+  } else {
+    document.querySelector("throne-panel")?.remove();
   }
 
   const layers: Controller[] = [

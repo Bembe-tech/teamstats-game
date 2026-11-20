@@ -18,6 +18,7 @@ import {
 } from "./Game";
 import { TileRef } from "./GameMap";
 import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
+import type { ThroneView } from "./Throne";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -250,6 +251,8 @@ export interface PlayerUpdate {
   trainGold?: Gold;
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
+  /** TeamStats.Pro King of the Hill 2: garrison + side reign (game/Throne.ts). */
+  throne?: ThroneView | null;
   /** TeamStats.Pro OpenFront 4D: Time Echo state (see game/TimeWarp.ts). */
   delayedOrders?: DelayedOrderView[];
   loopUses?: number;

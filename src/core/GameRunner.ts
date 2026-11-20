@@ -3,6 +3,7 @@ import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { KingOfTheHillExecution } from "./execution/KingOfTheHillExecution";
+import { ThroneExecution } from "./execution/ThroneExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -123,6 +124,8 @@ export class GameRunner {
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().kingOfTheHill()) {
       this.game.addExecution(new KingOfTheHillExecution());
+    } else if (this.game.config().kingOfTheHill2()) {
+      this.game.addExecution(new ThroneExecution());
     }
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());

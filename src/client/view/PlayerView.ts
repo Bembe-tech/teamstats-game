@@ -85,6 +85,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),
     crownTicks: pu.crownTicks ?? 0,
+    throne: pu.throne ?? null,
     delayedOrders: pu.delayedOrders ?? [],
     loopUses: pu.loopUses ?? 0,
     lastParadox: pu.lastParadox ?? null,
@@ -560,6 +561,14 @@ export class PlayerView {
 
   crownTicks(): number {
     return this.state.crownTicks ?? 0;
+  }
+
+  throne(): import("../../core/game/Throne").ThroneView | null {
+    return this.state.throne ?? null;
+  }
+
+  throneGarrison(): number {
+    return this.state.throne?.garrison ?? 0;
   }
 
   /** TeamStats.Pro OpenFront 4D: Time Loop uses and the newest paradox. */

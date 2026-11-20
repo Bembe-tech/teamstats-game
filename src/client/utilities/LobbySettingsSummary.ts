@@ -97,6 +97,11 @@ export function notableLobbySettings(
       label: translateText("game_settings.king_of_the_hill"),
       value: `${c.kingOfTheHillMinutes ?? 30} min`,
     });
+  if (c.kingOfTheHill2)
+    items.push({
+      label: translateText("game_settings.king_of_the_hill_2"),
+      value: `${c.kingOfTheHill2Minutes ?? 5} min, ${c.kingOfTheHill2ArmyShare ?? 30}%`,
+    });
   if (c.homeEconomy)
     items.push({
       label: translateText("game_settings.home_economy"),

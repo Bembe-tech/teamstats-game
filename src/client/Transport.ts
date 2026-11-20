@@ -167,6 +167,14 @@ export class SendTimeLoopIntentEvent implements GameEvent {}
 /** TeamStats.Pro OpenFront 4D: raise a ghost army. */
 export class SendTimeGhostIntentEvent implements GameEvent {}
 
+/** TeamStats.Pro King of the Hill 2: send troops to / withdraw from the throne. */
+export class SendThroneIntentEvent implements GameEvent {
+  constructor(
+    public readonly action: "send" | "withdraw",
+    public readonly percent: number,
+  ) {}
+}
+
 export class SendDeleteUnitIntentEvent implements GameEvent {
   constructor(public readonly unitId: number) {}
 }
@@ -339,6 +347,13 @@ export class Transport {
     );
     this.subscribe(SendTimeGhostIntentEvent, () =>
       this.sendIntent({ type: "time_ghost" }),
+    );
+    this.subscribe(SendThroneIntentEvent, (e) =>
+      this.sendIntent({
+        type: "throne",
+        action: e.action,
+        percent: e.percent,
+      }),
     );
     this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),

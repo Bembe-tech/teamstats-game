@@ -20,6 +20,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { THRONE_DEFAULTS } from "../game/Throne";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -426,6 +427,24 @@ export class Config {
   kingOfTheHillMinutes(): number {
     const m = this._gameConfig.kingOfTheHillMinutes;
     return m !== undefined && m !== null && m > 0 ? m : 30;
+  }
+  /** King of the Hill 2: the powered throne (game/Throne.ts). */
+  kingOfTheHill2(): boolean {
+    return this._gameConfig.kingOfTheHill2 ?? false;
+  }
+  /** Reign minutes a side needs to win (default THRONE_DEFAULTS.reignMinutes). */
+  kingOfTheHill2Minutes(): number {
+    const m = this._gameConfig.kingOfTheHill2Minutes;
+    return m !== undefined && m !== null && m > 0
+      ? m
+      : THRONE_DEFAULTS.reignMinutes;
+  }
+  /** Garrison share of the side's army needed to power the throne (%). */
+  kingOfTheHill2ArmyShare(): number {
+    const s = this._gameConfig.kingOfTheHill2ArmyShare;
+    return s !== undefined && s !== null && s > 0
+      ? s
+      : THRONE_DEFAULTS.armySharePercent;
   }
   homeEconomy(): boolean {
     return this._gameConfig.homeEconomy ?? false;
@@ -1094,7 +1113,13 @@ export class Config {
 
     let toAdd = 10 + pow(player.troops(), 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    // King of the Hill 2: the throne garrison still fills the population cap,
+    // so parking troops there does not speed up growth
+    const garrison = player.throneGarrison();
+    const ratio =
+      garrison > 0
+        ? Math.max(0, 1 - (player.troops() + garrison) / max)
+        : 1 - player.troops() / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {

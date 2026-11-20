@@ -51,6 +51,9 @@ const NULLABLE_KEYS = [
   "homeEconomy",
   "kingOfTheHill",
   "kingOfTheHillMinutes",
+  "kingOfTheHill2",
+  "kingOfTheHill2Minutes",
+  "kingOfTheHill2ArmyShare",
 ] as const satisfies readonly (keyof GameConfig)[];
 
 type NullableKey = (typeof NULLABLE_KEYS)[number];

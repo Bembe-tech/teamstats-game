@@ -72,6 +72,7 @@ export interface PlayerState {
   trainGold: number;
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
+  throne?: import("../../../core/game/Throne").ThroneView | null;
   delayedOrders?: import("../../../core/game/TimeWarp").DelayedOrderView[];
   loopUses?: number;
   lastParadox?: import("../../../core/game/TimeWarp").ParadoxView | null;

@@ -20,6 +20,7 @@ import type {
   GhostView,
   ParadoxView,
 } from "./TimeWarp";
+import type { ThroneView } from "./Throne";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -655,6 +656,10 @@ export interface Player {
   // TeamStats.Pro King of the Hill: ticks spent holding the crown
   crownTicks(): number;
   addCrownTicks(ticks: number): void;
+  // TeamStats.Pro King of the Hill 2: garrison at the throne + side reign (game/Throne.ts)
+  throne(): ThroneView | null;
+  setThrone(view: ThroneView | null): void;
+  throneGarrison(): number;
   // TeamStats.Pro OpenFront 4D: Time Echo uses, next allowed tick, and the
   // tick until which land attacks on this player are frozen
   loopUses(): number;
