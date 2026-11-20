@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/LangSelector";
 import type { LangSelector } from "../../src/client/LangSelector";
+import { ENGLISH_ONLY } from "../../src/client/LangSelector";
 import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import {
@@ -84,36 +84,42 @@ describe("cosmetic presentation localization", () => {
     vi.unstubAllGlobals();
   });
 
-  it("refreshes equipped, rarity, None, and Default labels on a live language switch", async () => {
-    selector = document.createElement("lang-selector") as LangSelector;
-    document.body.appendChild(selector);
-    await vi.waitFor(() => expect(selector!.defaultTranslations).toBeTruthy());
+  // TeamStats.Pro runs English only (ENGLISH_ONLY): there is no live language switch.
+  it.skipIf(ENGLISH_ONLY)(
+    "refreshes equipped, rarity, None, and Default labels on a live language switch",
+    async () => {
+      selector = document.createElement("lang-selector") as LangSelector;
+      document.body.appendChild(selector);
+      await vi.waitFor(() =>
+        expect(selector!.defaultTranslations).toBeTruthy(),
+      );
 
-    card = document.createElement("cosmetic-card") as CosmeticCard;
-    card.resolved = rarePattern;
-    card.state = "equipped";
-    document.body.appendChild(card);
+      card = document.createElement("cosmetic-card") as CosmeticCard;
+      card.resolved = rarePattern;
+      card.state = "equipped";
+      document.body.appendChild(card);
 
-    await card.updateComplete;
+      await card.updateComplete;
 
-    expect(
-      card.querySelector("[data-cosmetic-equipped]")?.textContent,
-    ).toContain("Equipped");
-    expect(cosmeticRarityLabel(rarePattern)).toContain("Rare");
-
-    window.dispatchEvent(
-      new CustomEvent("language-selected", { detail: { lang: "fr" } }),
-    );
-
-    await vi.waitFor(() => expect(selector!.currentLang).toBe("fr"));
-    await vi.waitFor(() =>
       expect(
-        card!.querySelector("[data-cosmetic-equipped]")?.textContent,
-      ).toContain("Équipé"),
-    );
-    expect(cosmeticRarityLabel(rarePattern)).toContain("Rare FR");
-    expect(cosmeticDisplayName(noCrown)).toBe("Aucun");
-    expect(cosmeticDisplayName(noFlag)).toBe("Aucun");
-    expect(cosmeticDisplayName(defaultEffect)).toBe("Par défaut");
-  });
+        card.querySelector("[data-cosmetic-equipped]")?.textContent,
+      ).toContain("Equipped");
+      expect(cosmeticRarityLabel(rarePattern)).toContain("Rare");
+
+      window.dispatchEvent(
+        new CustomEvent("language-selected", { detail: { lang: "fr" } }),
+      );
+
+      await vi.waitFor(() => expect(selector!.currentLang).toBe("fr"));
+      await vi.waitFor(() =>
+        expect(
+          card!.querySelector("[data-cosmetic-equipped]")?.textContent,
+        ).toContain("Équipé"),
+      );
+      expect(cosmeticRarityLabel(rarePattern)).toContain("Rare FR");
+      expect(cosmeticDisplayName(noCrown)).toBe("Aucun");
+      expect(cosmeticDisplayName(noFlag)).toBe("Aucun");
+      expect(cosmeticDisplayName(defaultEffect)).toBe("Par défaut");
+    },
+  );
 });

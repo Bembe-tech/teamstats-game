@@ -499,8 +499,10 @@ export async function startWorker() {
         public: g.isPublic() || g.isListed(),
         maxPlayers: Number(cfg.maxPlayers) || null,
         bots: Number(cfg.bots) || 0,
-        players: players.map((c) =>
-          (c.clanTag ? `[${c.clanTag}] ` : "") + String(c.username).slice(0, 30),
+        players: players.map(
+          (c) =>
+            (c.clanTag ? `[${c.clanTag}] ` : "") +
+            String(c.username).slice(0, 30),
         ),
         spectators: clients.length - players.length,
       };

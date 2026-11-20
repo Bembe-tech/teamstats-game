@@ -19,7 +19,7 @@ type LanguageMetadata = {
 // TeamStats.Pro (Bembe 2026-11-16): English only for now, the other translations are not complete for our
 // own screens. The translation files stay; set this to false to bring the language picker back
 // (and remove the "lang-selector" rule in index.html's TeamStats.Pro style block).
-const ENGLISH_ONLY = true;
+export const ENGLISH_ONLY = true;
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {

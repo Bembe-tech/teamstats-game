@@ -62,7 +62,6 @@ import {
 } from "./DesktopShell";
 import "./FeaturedStream";
 import "./GameModeSelector";
-import "./TspBeat";
 import {
   GameModeSelector,
   joinIsGateable,
@@ -137,6 +136,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import "./TspBeat";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,

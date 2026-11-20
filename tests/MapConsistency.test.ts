@@ -140,6 +140,9 @@ describe("Map consistency", () => {
 
       for (const file of files) {
         if (file === "info.json") continue;
+        // TeamStats.Pro: marker for maps copied with their generated files
+        // from a newer OpenFront (skipped by gen-maps, see map-generator/main.go).
+        if (file === "PREBUILT") continue;
         if (file.endsWith(".png") && !allowedPngs.has(file)) {
           errors.push(
             `${key}: unexpected file "${file}" in map-generator/assets/maps/${folder}/`,

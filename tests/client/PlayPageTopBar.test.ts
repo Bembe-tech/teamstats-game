@@ -56,7 +56,11 @@ describe("play-page mobile top bar", () => {
     beforeEach(mount);
 
     it("puts the bell/help icons beside the profile menu", () => {
-      expect(rightSlot()).toEqual(["nav-utility-icons", "nav-account-menu"]);
+      expect(rightSlot()).toEqual([
+        "nav-utility-icons",
+        "nav-account-menu",
+        "tsp-profile-button",
+      ]);
     });
   });
 
@@ -70,7 +74,11 @@ describe("play-page mobile top bar", () => {
       // News and Help left the hamburger, so the icons have to be here for
       // CrazyGames players; the profile menu's own "Sign in" item hands off to
       // their SDK prompt, so no platform-specific button is needed.
-      expect(rightSlot()).toEqual(["nav-utility-icons", "nav-account-menu"]);
+      expect(rightSlot()).toEqual([
+        "nav-utility-icons",
+        "nav-account-menu",
+        "tsp-profile-button",
+      ]);
     });
   });
 });

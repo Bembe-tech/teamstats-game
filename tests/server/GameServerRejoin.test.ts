@@ -94,9 +94,9 @@ describe("GameServer.rejoinClient", () => {
       expect(seen?.clanTag).toBe("NEW");
     });
 
-    it("drops the verified badge when the username changes", () => {
-      // The badge vouches for the exact join name; the rejoin path skips the
-      // Worker's badge validation, so a rename under it must lose it.
+    it("keeps the verified badge when the username changes (TeamStats.Pro)", () => {
+      // TeamStats.Pro: without the OpenFront API the check means "logged in
+      // with teamstats.pro", so it stays with any name (see rejoinClient).
       const game = makeGame();
       const client = makeClient({
         clientID: P1,
@@ -111,9 +111,9 @@ describe("GameServer.rejoinClient", () => {
         clanTag: null,
       });
 
-      expect(client.cosmetics?.verified).toBeUndefined();
+      expect(client.cosmetics?.verified).toBe(true);
       const seen = game.gameInfo().clients?.find((c) => c.clientID === P1);
-      expect(seen?.verified).toBeUndefined();
+      expect(seen?.verified).toBe(true);
     });
 
     it("keeps the verified badge when only the clan tag changes", () => {

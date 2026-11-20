@@ -236,6 +236,20 @@ func parseMapsFlag() (map[string]bool, error) {
 	return selected, nil
 }
 
+// isPrebuilt reports whether a map folder carries a PREBUILT marker.
+// TeamStats.Pro: maps copied data-only from a newer OpenFront keep the files in
+// resources/maps that its newer generator made (e.g. .webp layers, Brain Rot's
+// 2999 px wide layer), which this generator cannot remake. Their terrain files
+// are left as they are; info.json still feeds Maps.gen.ts and en.json.
+func isPrebuilt(m mapEntry) bool {
+	dir, err := inputMapDir(m.IsTest)
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(dir, m.Name, "PREBUILT"))
+	return err == nil
+}
+
 // loadTerrainMaps manages the concurrent generation of all selected maps.
 // It spins up goroutines for each map and aggregates any errors.
 // Concurrency is bounded by --workers to cap peak memory usage.
@@ -259,6 +273,9 @@ func loadTerrainMaps() ([]string, error) {
 	// Process maps concurrently, bounded by the semaphore
 	for _, mapItem := range maps {
 		if selectedMaps != nil && !selectedMaps[mapItem.Name] {
+			continue
+		}
+		if isPrebuilt(mapItem) {
 			continue
 		}
 		wg.Add(1)

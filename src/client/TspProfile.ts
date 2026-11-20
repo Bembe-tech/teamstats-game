@@ -289,7 +289,7 @@ export class TspProfileButton extends LitElement {
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.item)
-        throw new Error(d.error || "Could not save the rating.");
+        throw new Error(d.error ?? "Could not save the rating.");
       // the same object sits in this.skins and this.preview
       s.rating = Number(d.item.rating) || 0;
       s.ratings = Number(d.item.ratings) || 0;

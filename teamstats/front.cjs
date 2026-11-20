@@ -127,8 +127,7 @@ async function readTicket(t, aud = "teamstats-game") {
   } catch {
     return null;
   }
-  if (!d || !d.id || d.aud !== aud || !(d.exp > Date.now()))
-    return null;
+  if (!d || !d.id || d.aud !== aud || !(d.exp > Date.now())) return null;
   for (const force of [false, true]) {
     const key = await sitePublicKey(force);
     if (!key) return null;
