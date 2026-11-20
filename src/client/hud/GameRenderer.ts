@@ -43,6 +43,7 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { TimeWarpPanel } from "./layers/TimeWarpPanel";
+import { TimeWarpTimeline } from "./layers/TimeWarpTimeline";
 import { TutorialPanel } from "./layers/TutorialPanel";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
@@ -325,8 +326,16 @@ export function createRenderer(
     panel.game = game;
     panel.eventBus = eventBus;
     timeWarpLayers.push(panel);
+    let line = document.querySelector("time-warp-timeline") as TimeWarpTimeline;
+    if (!line) {
+      line = new TimeWarpTimeline();
+      document.body.appendChild(line);
+    }
+    line.game = game;
+    timeWarpLayers.push(line);
   } else {
     document.querySelector("time-warp-panel")?.remove();
+    document.querySelector("time-warp-timeline")?.remove();
   }
 
   const layers: Controller[] = [

@@ -72,6 +72,7 @@ export interface PlayerState {
   trainGold: number;
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
+  delayedOrders?: import("../../../core/game/TimeWarp").DelayedOrderView[];
   echoUses?: number;
   echoReadyTick?: number;
   timeShieldUntil?: number;

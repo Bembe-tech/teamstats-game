@@ -40,6 +40,12 @@ const MAX_TICK_CHANGES = LOG_CAPACITY >> 2;
 
 // Unit types kept in past snapshots (trade ships and trains are left out:
 // many of them, and they say little about the war)
+const NUKE_UNITS = new Set<string>([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+]);
+
 const SNAP_TYPES = new Set<string>([
   UnitType.TransportShip,
   UnitType.Warship,
@@ -67,6 +73,24 @@ export interface BoatForecast {
   etaS: number;
   mine: boolean;
   hostile: boolean; // heading for your (or a friend's) land, not yours
+}
+
+/** Something that happened, for the timeline (tick = when). */
+export interface TimeEvent {
+  tick: number;
+  icon: string;
+  text: string;
+  /** "me" = about you, "foe" = against you, "info" = elsewhere */
+  tone: "me" | "foe" | "info";
+}
+
+export interface MapMarker {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  /** Ring radius in tiles (0 = none). */
+  ring: number;
 }
 
 export interface FrontForecast {
@@ -100,6 +124,136 @@ export class TimeWarp {
   private viewSnapTick = -1;
   private needExitUpload = false;
 
+  // ── markers ──
+
+  private markersTick = -1;
+
+  /**
+   * Delay for an order being sent now (ticks), or 0 when it goes out right
+   * away. A one-shot delay switches itself off after one order.
+   */
+  takeOrderDelay(): number {
+    if (this.failed !== null) return 0;
+    const d = this.orderDelayTicks;
+    if (!this.orderDelaySticky) this.orderDelayTicks = 0;
+    return d;
+  }
+
+  /** Past events for the timeline, oldest first (last MAX_TICKS). */
+  events: TimeEvent[] = [];
+  private seenAttacks = new Set<string>();
+  private echoSeen = new Map<number, number>();
+  private ordersSeen = new Set<number>();
+
+  pushEvent(e: TimeEvent): void {
+    this.events.push(e);
+    const min = e.tick - MAX_TICKS;
+    while (this.events.length > 0 && this.events[0].tick < min) {
+      this.events.shift();
+    }
+    if (this.events.length > 200) this.events.shift();
+  }
+
+  /** Watches the game for the timeline's past events. */
+  private trackEvents(gameView: GameView, tick: number): void {
+    const me = gameView.myPlayer();
+    if (me !== null) {
+      const now = new Set<string>();
+      for (const a of me.incomingAttacks()) {
+        now.add(a.id);
+        if (!this.seenAttacks.has(a.id)) {
+          const p = gameView.playerBySmallID(a.attackerID);
+          this.pushEvent({
+            tick,
+            icon: "⚔",
+            text: `${p.isPlayer() ? p.displayName() : "?"} → you`,
+            tone: "foe",
+          });
+        }
+      }
+      for (const a of me.outgoingAttacks()) {
+        now.add(a.id);
+        if (!this.seenAttacks.has(a.id)) {
+          const p = gameView.playerBySmallID(a.targetID);
+          this.pushEvent({
+            tick,
+            icon: "⚔",
+            text: `you → ${p.isPlayer() ? p.displayName() : "land"}`,
+            tone: "me",
+          });
+        }
+      }
+      this.seenAttacks = now;
+      const orders = new Set(me.delayedOrders().map((o) => o.id));
+      for (const id of this.ordersSeen) {
+        if (!orders.has(id)) {
+          this.pushEvent({ tick, icon: "⏱", text: "order fired", tone: "me" });
+        }
+      }
+      this.ordersSeen = orders;
+    }
+    if (tick % 5 !== 0) return;
+    for (const p of gameView.playerViews()) {
+      const n = p.echoUses();
+      const before = this.echoSeen.get(p.smallID()) ?? 0;
+      if (n > before) {
+        const mine = me !== null && p.smallID() === me.smallID();
+        this.pushEvent({
+          tick,
+          icon: "⌛",
+          text: `${mine ? "you" : p.displayName()}: Time Echo`,
+          tone: mine ? "me" : "info",
+        });
+      }
+      this.echoSeen.set(p.smallID(), n);
+    }
+  }
+
+  private computeMarkers(gameView: GameView, tick: number): void {
+    this.trackEvents(gameView, tick);
+    const out: MapMarker[] = [];
+    const me = gameView.myPlayer();
+    if (me !== null && me.isAlive()) {
+      for (const o of me.delayedOrders()) {
+        const left = Math.max(0, Math.ceil((o.fireTick - tick) / 10));
+        let x = -1;
+        let y = -1;
+        if (o.tile >= 0) {
+          x = o.tile % this.w;
+          y = (o.tile / this.w) | 0;
+        } else {
+          const who =
+            o.target > 0 ? gameView.playerBySmallID(o.target) : (me as never);
+          const loc = (
+            who as { nameLocation?: () => { x: number; y: number } | undefined }
+          ).nameLocation?.();
+          if (loc) {
+            x = loc.x;
+            y = loc.y;
+          }
+        }
+        if (x < 0) continue;
+        const icon =
+          o.kind === "attack"
+            ? "⚔"
+            : o.kind === "boat"
+              ? "⛵"
+              : NUKE_UNITS.has(o.unit)
+                ? "☢"
+                : "🏗";
+        out.push({
+          x,
+          y,
+          text: `⏱ ${left}s ${icon}`,
+          color: "rgba(255,215,90,1)",
+          ring: o.kind === "attack" ? 0 : 3,
+        });
+      }
+    }
+    if (out.length > 0 || this.markers.length > 0) this.markersDirty = true;
+    this.markers = out;
+  }
+
   // ── forecast ──
   forecastOn = true;
   private readonly cell: number;
@@ -109,6 +263,13 @@ export class TimeWarp {
   private readonly fcImage: HTMLCanvasElement;
   private readonly fcData: ImageData;
   private fcDirty = true;
+  /** Labels on the map: own delayed orders, ghosts, paradoxes (tile x/y). */
+  markers: MapMarker[] = [];
+  private markersDirty = false;
+  /** Delay (ticks) put on the next attack / boat / build; 0 = off. */
+  orderDelayTicks = 0;
+  /** Keep the delay for every order, not just the next one. */
+  orderDelaySticky = false;
   boats: BoatForecast[] = [];
   fronts: FrontForecast[] = [];
   private attackTracks = new Map<string, AttackTrack>();
@@ -232,6 +393,10 @@ export class TimeWarp {
       this.computeForecast(gameView, frame);
     } else if (!this.forecastOn && (this.boats.length || this.fronts.length)) {
       this.clearForecast();
+    }
+    if (frame.tick !== this.markersTick) {
+      this.markersTick = frame.tick;
+      this.computeMarkers(gameView, frame.tick);
     }
     const t2 = performance.now();
     const out = this.view(frame);
@@ -657,18 +822,56 @@ export class TimeWarp {
       this.lastCam = "";
     }
     const cam = `${centerX.toFixed(2)},${centerY.toFixed(2)},${scale.toFixed(4)}`;
-    if (!this.fcDirty && cam === this.lastCam) return;
+    if (!this.fcDirty && !this.markersDirty && cam === this.lastCam) return;
     this.lastCam = cam;
+    this.markersDirty = false;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, c.width, c.height);
+    const s = scale * dpr;
+    const tx = (cssW / 2) * dpr - centerX * s;
+    const ty = (cssH / 2) * dpr - centerY * s;
     const show =
       this.forecastOn &&
       !this.isViewingPast() &&
       (this.boats.length > 0 || this.fronts.length > 0);
-    if (!show) {
-      this.fcDirty = false;
-      return;
+    if (show) this.drawForecast(ctx, s, tx, ty, dpr);
+    else this.fcDirty = false;
+    if (!this.isViewingPast()) this.drawMarkers(ctx, s, tx, ty, dpr);
+  }
+
+  private drawMarkers(
+    ctx: CanvasRenderingContext2D,
+    s: number,
+    tx: number,
+    ty: number,
+    dpr: number,
+  ): void {
+    if (this.markers.length === 0) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.font = `${Math.round(12 * dpr)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    for (const m of this.markers) {
+      const x = (m.x + 0.5) * s + tx;
+      const y = (m.y + 0.5) * s + ty;
+      if (m.ring > 0) {
+        ctx.strokeStyle = m.color;
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(6 * dpr, m.ring * s), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      this.label(ctx, m.text, x, y - 8 * dpr, m.color, dpr);
     }
+  }
+
+  private drawForecast(
+    ctx: CanvasRenderingContext2D,
+    s: number,
+    tx: number,
+    ty: number,
+    dpr: number,
+  ): void {
     if (this.fcDirty) {
       const px = this.fcData.data;
       for (let i = 0; i < this.fcCells.length; i++) {
@@ -691,9 +894,6 @@ export class TimeWarp {
       this.fcImage.getContext("2d")!.putImageData(this.fcData, 0, 0);
       this.fcDirty = false;
     }
-    const s = scale * dpr;
-    const tx = (cssW / 2) * dpr - centerX * s;
-    const ty = (cssH / 2) * dpr - centerY * s;
     ctx.setTransform(s, 0, 0, s, tx, ty);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(

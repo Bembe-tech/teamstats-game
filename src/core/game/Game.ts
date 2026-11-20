@@ -14,7 +14,7 @@ import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
-import type { ChronoLog } from "./TimeWarp";
+import type { ChronoLog, DelayedOrderView } from "./TimeWarp";
 import { UnitPredicate } from "./UnitGrid";
 
 function isEnumValue<T extends Record<string, string | number>>(
@@ -652,6 +652,9 @@ export interface Player {
   addCrownTicks(ticks: number): void;
   // TeamStats.Pro OpenFront 4D: Time Echo uses, next allowed tick, and the
   // tick until which land attacks on this player are frozen
+  delayedOrders(): DelayedOrderView[];
+  addDelayedOrder(o: DelayedOrderView): void;
+  removeDelayedOrder(id: number): void;
   echoUses(): number;
   echoReadyTick(): number;
   timeShieldUntil(): number;

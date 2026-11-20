@@ -85,6 +85,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),
     crownTicks: pu.crownTicks ?? 0,
+    delayedOrders: pu.delayedOrders ?? [],
     echoUses: pu.echoUses ?? 0,
     echoReadyTick: pu.echoReadyTick ?? 0,
     timeShieldUntil: pu.timeShieldUntil ?? 0,
@@ -554,6 +555,11 @@ export class PlayerView {
 
   crownTicks(): number {
     return this.state.crownTicks ?? 0;
+  }
+
+  /** TeamStats.Pro OpenFront 4D: own orders waiting to fire. */
+  delayedOrders(): import("../../core/game/TimeWarp").DelayedOrderView[] {
+    return this.state.delayedOrders ?? [];
   }
 
   /** TeamStats.Pro OpenFront 4D: Time Echo state. */

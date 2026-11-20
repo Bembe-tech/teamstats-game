@@ -61,6 +61,7 @@ import {
   bumpTraversalGeneration,
   tileTraversalScratch,
 } from "./TileTraversalScratch";
+import type { DelayedOrderView } from "./TimeWarp";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -124,6 +125,7 @@ export class PlayerImpl implements Player {
   /** Cumulative train revenue: own trains + others' trains stopping at own stations. */
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
+  private _delayedOrders: DelayedOrderView[] = [];
   private _echoUses = 0;
   private _echoReadyTick = 0;
   private _timeShieldUntil = 0;
@@ -381,6 +383,7 @@ export class PlayerImpl implements Player {
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
+      delayedOrders: this._delayedOrders,
       echoUses: this._echoUses,
       echoReadyTick: this._echoReadyTick,
       timeShieldUntil: this._timeShieldUntil,
@@ -1322,6 +1325,19 @@ export class PlayerImpl implements Player {
 
   addCrownTicks(ticks: number): void {
     this._crownTicks += ticks;
+  }
+
+  delayedOrders(): DelayedOrderView[] {
+    return this._delayedOrders;
+  }
+
+  // Replaced, not mutated, so the update diff sees a change
+  addDelayedOrder(o: DelayedOrderView): void {
+    this._delayedOrders = [...this._delayedOrders, o];
+  }
+
+  removeDelayedOrder(id: number): void {
+    this._delayedOrders = this._delayedOrders.filter((o) => o.id !== id);
   }
 
   echoUses(): number {

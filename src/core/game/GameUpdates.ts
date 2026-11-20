@@ -17,6 +17,7 @@ import {
   WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
+import type { DelayedOrderView } from "./TimeWarp";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -250,6 +251,7 @@ export interface PlayerUpdate {
   /** TeamStats.Pro King of the Hill: ticks spent holding the crown. */
   crownTicks?: number;
   /** TeamStats.Pro OpenFront 4D: Time Echo state (see game/TimeWarp.ts). */
+  delayedOrders?: DelayedOrderView[];
   echoUses?: number;
   echoReadyTick?: number;
   timeShieldUntil?: number;

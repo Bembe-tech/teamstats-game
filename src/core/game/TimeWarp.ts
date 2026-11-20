@@ -53,6 +53,24 @@ export function echoRestoreCap(currentTiles: number): number {
   );
 }
 
+// ── Delayed orders (attack / boat / build that fires later) ──
+export const ORDER_MIN_DELAY_TICKS = 30; // 3 s
+export const ORDER_MAX_DELAY_TICKS = 600; // 60 s
+export const ORDER_MAX_PENDING = 5;
+
+/** A delayed order as the HUD sees it (own player only). */
+export interface DelayedOrderView {
+  id: number;
+  kind: "attack" | "boat" | "build_unit";
+  fireTick: number;
+  /** Target tile (boat, build) or -1 (land attack). */
+  tile: number;
+  /** Land attack target player smallID (0 = empty land), else 0. */
+  target: number;
+  /** Unit type for builds, "" otherwise. */
+  unit: string;
+}
+
 /** Client: how far back the past view reaches. */
 export const PAST_VIEW_MAX_SECONDS = 15;
 

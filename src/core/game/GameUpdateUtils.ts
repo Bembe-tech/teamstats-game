@@ -51,6 +51,7 @@ export function diffPlayerUpdate(
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.crownTicks === next.crownTicks &&
+    prev.delayedOrders === next.delayedOrders &&
     prev.echoUses === next.echoUses &&
     prev.echoReadyTick === next.echoReadyTick &&
     prev.timeShieldUntil === next.timeShieldUntil &&
@@ -108,6 +109,7 @@ export function diffPlayerUpdate(
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("crownTicks", prev.crownTicks === next.crownTicks);
+  setIfDifferent("delayedOrders", prev.delayedOrders === next.delayedOrders);
   setIfDifferent("echoUses", prev.echoUses === next.echoUses);
   setIfDifferent("echoReadyTick", prev.echoReadyTick === next.echoReadyTick);
   setIfDifferent(
@@ -192,6 +194,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.tradeGold !== undefined) target.tradeGold = Number(pu.tradeGold);
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);
   if (pu.crownTicks !== undefined) target.crownTicks = pu.crownTicks;
+  if (pu.delayedOrders !== undefined) target.delayedOrders = pu.delayedOrders;
   if (pu.echoUses !== undefined) target.echoUses = pu.echoUses;
   if (pu.echoReadyTick !== undefined) target.echoReadyTick = pu.echoReadyTick;
   if (pu.timeShieldUntil !== undefined)

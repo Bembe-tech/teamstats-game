@@ -49,6 +49,7 @@ import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import { SiloSelect } from "./SiloSelect";
 import { describeSocketClose } from "./SocketClose";
+import { TimeWarp } from "./TimeWarp";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
@@ -1014,6 +1015,21 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    // TeamStats.Pro OpenFront 4D: a delayed order (armed in the 4D panel)
+    if (
+      intent.type === "attack" ||
+      intent.type === "boat" ||
+      intent.type === "build_unit"
+    ) {
+      const delay = TimeWarp.current?.takeOrderDelay() ?? 0;
+      if (delay > 0) {
+        const { clientID: _drop, ...order } = intent as typeof intent & {
+          clientID?: string;
+        };
+        void _drop;
+        intent = { type: "delayed_order", delay, order };
+      }
+    }
     const msg = {
       type: "intent",
       intent: intent,

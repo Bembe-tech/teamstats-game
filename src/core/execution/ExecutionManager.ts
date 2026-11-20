@@ -9,6 +9,7 @@ import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { DelayedOrderExecution } from "./DelayedOrderExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
@@ -139,6 +140,13 @@ export class Executor {
         return new PauseExecution(player, intent.paused);
       case "time_echo":
         return new TimeEchoExecution(player);
+      case "delayed_order":
+        return new DelayedOrderExecution(
+          player,
+          intent.delay,
+          intent.order,
+          (order) => this.createExec({ ...order, clientID: intent.clientID }),
+        );
       default:
         throw new Error(`intent type ${intent} not found`);
     }

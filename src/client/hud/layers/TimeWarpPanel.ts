@@ -9,6 +9,7 @@ import {
   ECHO_EARLIEST_TICK_AFTER_SPAWN,
   ECHO_MAX_USES,
   ECHO_WINDOW_TICKS,
+  ORDER_MAX_PENDING,
   PAST_VIEW_MAX_SECONDS,
   echoBlock,
   echoCost,
@@ -84,7 +85,8 @@ export class TimeWarpPanel extends LitElement implements Controller {
       </button>`;
     }
     const avail = Math.min(PAST_VIEW_MAX_SECONDS, warp.availableSeconds());
-    if (warp.failed !== null && this.pastS > 0) this.pastS = 0;
+    this.pastS = warp.pastSeconds(); // the timeline can change it too
+    if (this.pastS > 0) this.lastPastS = this.pastS;
     const viewing = this.pastS > 0;
 
     return html`
@@ -108,6 +110,7 @@ export class TimeWarpPanel extends LitElement implements Controller {
               ${translateText("time_warp.view_off")}
             </div>`
           : this.renderViews(warp, avail, viewing)}
+        ${me && me.isAlive() ? this.renderOrders(warp) : nothing}
         ${me ? this.renderEcho() : nothing}
       </div>
     `;
@@ -154,6 +157,71 @@ export class TimeWarpPanel extends LitElement implements Controller {
           warp.forecastOn ? "time_warp.forecast_on" : "time_warp.forecast_off",
         )}
       </button>
+    `;
+  }
+
+  /** Delayed orders: pick a delay, the next attack / boat / build waits. */
+  private renderOrders(warp: TimeWarp) {
+    const me = this.game.myPlayer()!;
+    const now = this.game.ticks();
+    const armed = warp.orderDelayTicks;
+    const pending = me.delayedOrders();
+    const btn = (s: number) =>
+      html`<button
+        class="rounded px-1.5 py-0.5 ${armed === s * 10
+          ? "bg-amber-600"
+          : "bg-gray-700 hover:bg-gray-600"}"
+        @click=${() => {
+          warp.orderDelayTicks = armed === s * 10 ? 0 : s * 10;
+          this.requestUpdate();
+        }}
+      >
+        ${s}s
+      </button>`;
+    return html`
+      <div class="flex flex-col gap-1">
+        <div
+          class="flex items-center gap-1"
+          title=${translateText("time_warp.order_hint", {
+            n: ORDER_MAX_PENDING,
+          })}
+        >
+          <span>⏱</span>
+          ${[5, 10, 20, 30, 60].map(btn)}
+        </div>
+        ${armed > 0
+          ? html`<label
+              class="flex items-center gap-1 text-[10px] text-amber-200"
+            >
+              <input
+                type="checkbox"
+                .checked=${warp.orderDelaySticky}
+                @change=${(e: Event) => {
+                  warp.orderDelaySticky = (
+                    e.target as HTMLInputElement
+                  ).checked;
+                }}
+              />
+              ${translateText(
+                warp.orderDelaySticky
+                  ? "time_warp.order_armed_all"
+                  : "time_warp.order_armed",
+                { s: armed / 10 },
+              )}
+            </label>`
+          : nothing}
+        ${pending.length > 0
+          ? html`<div class="text-[10px] text-amber-100 leading-tight">
+              ${pending.map(
+                (o) =>
+                  html`<div>
+                    ⏱ ${Math.max(0, Math.ceil((o.fireTick - now) / 10))}s
+                    ${translateText(`time_warp.order_${o.kind}`)}
+                  </div>`,
+              )}
+            </div>`
+          : nothing}
+      </div>
     `;
   }
 
