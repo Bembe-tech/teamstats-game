@@ -45,6 +45,8 @@ function view(incoming: object[] = []) {
     incomingAttacks: () => incoming,
     delayedOrders: () => [],
     echoUses: () => 0,
+    ghostUses: () => 0,
+    lastGhost: () => null,
     displayName: () => "me",
   };
   return {
@@ -181,6 +183,8 @@ describe("TimeWarp forecast", () => {
     expect(warp.fronts.length).toBe(1);
     expect(warp.fronts[0].endsInS).toBe(1);
     expect(warp.fronts[0].tiles).toBe(333); // 100 tiles/tick x 3.33 ticks
+    // Branches of the timeline: slower (x0.6) and faster (x1.4)
+    expect(warp.fronts[0].branches).toEqual([200, 333, 466]);
   });
 });
 

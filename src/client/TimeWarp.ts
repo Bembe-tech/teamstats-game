@@ -31,6 +31,9 @@ const MAX_TICKS = PAST_VIEW_MAX_SECONDS * 10;
 const SNAPSHOT_EVERY = 20; // ticks between unit snapshots
 const FORECAST_TICKS = 100; // 10 s
 const FORECAST_EVERY = 5; // ticks between forecast recomputes
+// Branches of the forecast: the attack at this share of its current speed
+const BRANCH_SLOW = 0.6;
+const BRANCH_FAST = 1.4;
 const RATE_TICKS = 30; // attack speed measured over the last 3 s
 // Forecast image cell, in tiles: 2 on normal maps, 4 on huge ones (over 4M
 // tiles, e.g. Giant World Map or big TeamStats maps) to keep the image small
@@ -96,7 +99,10 @@ export interface MapMarker {
 
 export interface FrontForecast {
   incoming: boolean;
+  /** Tiles in the likely branch */
   tiles: number;
+  /** Tiles in the slow / likely / fast branches of the timeline */
+  branches: [number, number, number];
   endsInS: number | null; // the attack runs out of troops in ~N s
   labelX: number;
   labelY: number;
@@ -696,19 +702,27 @@ export class TimeWarp {
         }
       }
       if (predicted <= 0) continue;
+      // Three branches of the timeline: the attack slows down (defender
+      // reinforces), goes on as now, or speeds up (defender weakens)
+      const branches: [number, number, number] = [
+        Math.round(predicted * BRANCH_SLOW),
+        predicted,
+        Math.round(predicted * BRANCH_FAST),
+      ];
       const res = this.growFront(
         tiles,
         (ref) => gameView.isLand(ref),
         att,
         def,
         frame.tick - RATE_TICKS,
-        predicted,
-        incoming ? 1 : 2,
+        branches,
+        incoming ? 0 : 3,
       );
       if (res.n === 0) continue;
       this.fronts.push({
         incoming,
-        tiles: res.n,
+        tiles: res.reached[1],
+        branches: res.reached,
         endsInS,
         labelX: res.sx / res.n,
         labelY: res.sy / res.n,
@@ -748,9 +762,14 @@ export class TimeWarp {
     att: number,
     def: number,
     sinceTick: number,
-    limit: number,
-    mark: number,
-  ): { n: number; sx: number; sy: number } {
+    limits: [number, number, number],
+    kindBase: number,
+  ): {
+    n: number;
+    sx: number;
+    sy: number;
+    reached: [number, number, number];
+  } {
     const w = this.w;
     const h = this.h;
     if (++this.bfsStamp > 0xffff) {
@@ -792,6 +811,9 @@ export class TimeWarp {
     let n = 0;
     let sx = 0;
     let sy = 0;
+    // Breadth-first order is nearest first: the first limits[0] tiles are
+    // reached in every branch, the next ones only in the faster branches
+    const limit = limits[2];
     for (let qi = 0; qi < queue.length && n < limit; qi++) {
       const ref = queue[qi];
       const x = ref % w;
@@ -799,11 +821,21 @@ export class TimeWarp {
       n++;
       sx += x;
       sy += y;
-      this.fcCells[((y / this.cell) | 0) * this.fcCw + ((x / this.cell) | 0)] =
-        mark;
+      const level = n <= limits[0] ? 1 : n <= limits[1] ? 2 : 3;
+      const c = ((y / this.cell) | 0) * this.fcCw + ((x / this.cell) | 0);
+      const old = this.fcCells[c];
+      // Keep the surest branch when two fronts share a cell
+      if (old === 0 || old > kindBase + level || old <= kindBase) {
+        this.fcCells[c] = kindBase + level;
+      }
       neighbors(ref, tryAdd);
     }
-    return { n, sx, sy };
+    const reached: [number, number, number] = [
+      Math.min(n, limits[0]),
+      Math.min(n, limits[1]),
+      n,
+    ];
+    return { n, sx, sy, reached };
   }
 
   // ── drawing ──
@@ -928,16 +960,15 @@ export class TimeWarp {
         const o = i * 4;
         if (m === 0) {
           px[o + 3] = 0;
-        } else if (m === 1) {
-          px[o] = 255;
-          px[o + 1] = 60;
-          px[o + 2] = 60;
-          px[o + 3] = 120;
         } else {
-          px[o] = 80;
-          px[o + 1] = 230;
-          px[o + 2] = 255;
-          px[o + 3] = 110;
+          // 1-3: land you lose (sure → only if they speed up),
+          // 4-6: land you take
+          const loss = m <= 3;
+          const level = loss ? m : m - 3;
+          px[o] = loss ? 255 : 80;
+          px[o + 1] = loss ? 60 : 230;
+          px[o + 2] = loss ? 60 : 255;
+          px[o + 3] = level === 1 ? 140 : level === 2 ? 90 : 45;
         }
       }
       this.fcImage.getContext("2d")!.putImageData(this.fcData, 0, 0);
@@ -990,8 +1021,10 @@ export class TimeWarp {
     }
     for (const f of this.fronts) {
       const [x, y] = [(f.labelX + 0.5) * s + tx, (f.labelY + 0.5) * s + ty];
+      const sign = f.incoming ? "−" : "+";
+      const [lo, mid, hi] = f.branches;
       const text =
-        (f.incoming ? `−${f.tiles}` : `+${f.tiles}`) +
+        (lo === hi ? `${sign}${mid}` : `${sign}${lo} / ${mid} / ${hi}`) +
         (f.endsInS !== null ? ` · ${f.endsInS}s` : " · 10s");
       this.label(
         ctx,
