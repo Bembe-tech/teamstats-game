@@ -158,8 +158,13 @@ async function main() {
     echoSent: 0,
     echoApplied: 0,
     echoRejected: 0,
+    delayed: 0,
+    ghosts: 0,
+    loops: 0,
     checks: 0,
   };
+  // Echo against an echo: answer a fresh echo on you the next second
+  const echoedAt = new Map<number, number>();
   let turn = 0;
   let desync: string | null = null;
 
@@ -224,12 +229,23 @@ async function main() {
         const target =
           pool.length > 0 ? pool[rnd.nextInt(0, pool.length)] : null;
 
-        out.push({
-          type: "attack",
+        const attack = {
+          type: "attack" as const,
           targetID: target !== null && target.isPlayer() ? target.id() : null,
           troops: p.troops() * (target === null ? 0.5 : 0.35),
-          clientID,
-        });
+        };
+        // Every 4th attack is a delayed order (5-30 s)
+        if (!early && rnd.chance(4)) {
+          out.push({
+            type: "delayed_order",
+            delay: 50 + rnd.nextInt(0, 26) * 10,
+            order: attack,
+            clientID,
+          });
+          stats.delayed++;
+        } else {
+          out.push({ ...attack, clientID });
+        }
         stats.attacks++;
       }
       if ((tick + i * 31) % 250 === 0) {
@@ -241,12 +257,22 @@ async function main() {
           const o = others[rnd.nextInt(0, others.length)]!;
           const tiles = Array.from(o.borderTiles());
           if (tiles.length > 0) {
-            out.push({
-              type: "boat",
+            const boat = {
+              type: "boat" as const,
               troops: p.troops() * 0.15,
               dst: tiles[rnd.nextInt(0, tiles.length)],
-              clientID,
-            });
+            };
+            if (rnd.chance(3)) {
+              out.push({
+                type: "delayed_order",
+                delay: 100,
+                order: boat,
+                clientID,
+              });
+              stats.delayed++;
+            } else {
+              out.push({ ...boat, clientID });
+            }
             stats.boats++;
           }
         }
@@ -265,8 +291,38 @@ async function main() {
         { used: p.echoUses(), readyTick: p.echoReadyTick() },
         p.gold(),
       );
+      // Someone echoed land back from me a moment ago: echo right back
+      // (a paradox when both claim the same land)
+      for (const o of ref.allPlayers()) {
+        if (o === p || o.echoUses() === 0) continue;
+        const was = echoedAt.get(o.smallID()) ?? 0;
+        if (o.echoReadyTick() !== was) {
+          echoedAt.set(o.smallID(), o.echoReadyTick());
+        }
+      }
+      const answer =
+        block === "ok" &&
+        tick % 10 === 7 &&
+        ref
+          .allPlayers()
+          .some(
+            (o) =>
+              o !== p &&
+              o.echoUses() > 0 &&
+              tick - (o.echoReadyTick() - 1800) < 30 &&
+              tick - (o.echoReadyTick() - 1800) > 0,
+          );
+      if (losing && tick % 50 === 9) {
+        out.push({ type: "time_ghost", clientID });
+        stats.ghosts++;
+      }
+      if (losing && p.loopUses() === 0 && tick % 100 === 21) {
+        out.push({ type: "time_loop", clientID });
+        stats.loops++;
+      }
       if (
         (losing && block === "ok" && tick % 10 === 3) ||
+        answer ||
         (tick + i * 13) % 600 === 0
       ) {
         out.push({ type: "time_echo", clientID });
@@ -283,7 +339,12 @@ async function main() {
     for (const p of g.allPlayers()) {
       parts.push(
         `${p.id()}:${p.numTilesOwned()}:${Math.round(p.troops())}:${p.gold()}:` +
-          `${p.echoUses()}:${p.echoReadyTick()}:${p.timeShieldUntil()}:${p.units().length}:${p.isAlive()}`,
+          `${p.echoUses()}:${p.echoReadyTick()}:${p.timeShieldUntil()}:${p.units().length}:${p.isAlive()}:` +
+          `${p.ghostUses()}:${p.ghostReadyTick()}:${p.loopUses()}:${p.lastParadox()?.tick ?? -1}:${p.lastParadox()?.won ?? ""}:` +
+          p
+            .delayedOrders()
+            .map((o) => `${o.id}@${o.fireTick}`)
+            .join(","),
       );
     }
     if (full) {
@@ -354,6 +415,13 @@ async function main() {
         echoSent: stats.echoSent,
         echoAllowed: stats.echoApplied,
         echoRejected: stats.echoRejected,
+        delayedSent: stats.delayed,
+        ghostsSent: stats.ghosts,
+        loopsSent: stats.loops,
+        ghostsUsed: ref.allPlayers().reduce((s, p) => s + p.ghostUses(), 0),
+        loopsUsed: ref.allPlayers().reduce((s, p) => s + p.loopUses(), 0),
+        paradoxes: ref.allPlayers().filter((p) => p.lastParadox() !== null)
+          .length,
         echoesUsedByAll: ref.allPlayers().reduce((s, p) => s + p.echoUses(), 0),
         alive: alive.length,
         humanState,
