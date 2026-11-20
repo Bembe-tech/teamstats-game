@@ -26,6 +26,7 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TimeEchoExecution } from "./TimeEchoExecution";
+import { TimeGhostExecution } from "./TimeGhostExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -140,6 +141,8 @@ export class Executor {
         return new PauseExecution(player, intent.paused);
       case "time_echo":
         return new TimeEchoExecution(player);
+      case "time_ghost":
+        return new TimeGhostExecution(player);
       case "delayed_order":
         return new DelayedOrderExecution(
           player,

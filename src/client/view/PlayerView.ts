@@ -86,6 +86,9 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     trainGold: Number(pu.trainGold ?? 0n),
     crownTicks: pu.crownTicks ?? 0,
     delayedOrders: pu.delayedOrders ?? [],
+    ghostUses: pu.ghostUses ?? 0,
+    ghostReadyTick: pu.ghostReadyTick ?? 0,
+    lastGhost: pu.lastGhost ?? null,
     echoUses: pu.echoUses ?? 0,
     echoReadyTick: pu.echoReadyTick ?? 0,
     timeShieldUntil: pu.timeShieldUntil ?? 0,
@@ -555,6 +558,19 @@ export class PlayerView {
 
   crownTicks(): number {
     return this.state.crownTicks ?? 0;
+  }
+
+  /** TeamStats.Pro OpenFront 4D: ghosts of the past. */
+  ghostUses(): number {
+    return this.state.ghostUses ?? 0;
+  }
+
+  ghostReadyTick(): number {
+    return this.state.ghostReadyTick ?? 0;
+  }
+
+  lastGhost(): import("../../core/game/TimeWarp").GhostView | null {
+    return this.state.lastGhost ?? null;
   }
 
   /** TeamStats.Pro OpenFront 4D: own orders waiting to fire. */

@@ -19,7 +19,8 @@
 //     the attack has left; troops lost per tile is measured, not guessed.
 
 import { UnitType } from "../core/game/Game";
-import { PAST_VIEW_MAX_SECONDS } from "../core/game/TimeWarp";
+import { GHOST_MARK_TICKS, PAST_VIEW_MAX_SECONDS } from "../core/game/TimeWarp";
+import { FogOfWar } from "./FogOfWar";
 import { OWNER_MASK } from "./render/gl/utils/TileCodec";
 import type { FrameData, UnitState } from "./render/types";
 import type { GameView } from "./view";
@@ -143,6 +144,7 @@ export class TimeWarp {
   events: TimeEvent[] = [];
   private seenAttacks = new Set<string>();
   private echoSeen = new Map<number, number>();
+  private ghostSeen = new Map<number, number>();
   private ordersSeen = new Set<number>();
 
   pushEvent(e: TimeEvent): void {
@@ -206,7 +208,41 @@ export class TimeWarp {
         });
       }
       this.echoSeen.set(p.smallID(), n);
+      const gN = p.ghostUses();
+      if (gN > (this.ghostSeen.get(p.smallID()) ?? 0)) {
+        const g = p.lastGhost();
+        const mine = me !== null && p.smallID() === me.smallID();
+        const onMe = me !== null && g !== null && g.target === me.smallID();
+        this.pushEvent({
+          tick,
+          icon: "👻",
+          text: `${mine ? "your" : p.displayName() + "'s"} ghost army`,
+          tone: mine ? "me" : onMe ? "foe" : "info",
+        });
+      }
+      this.ghostSeen.set(p.smallID(), gN);
     }
+  }
+
+  /** Tiles the player lost to others in the last `seconds` (shown log). */
+  lostRecently(smallID: number, seconds: number): number {
+    let n = 0;
+    const since = this.lastTick - seconds * 10;
+    for (let gi = this.groups.length - 1; gi >= 0; gi--) {
+      const g = this.groups[gi];
+      if (g.tick < since) break;
+      for (let p = g.start; p < g.end; p++) {
+        const i = p & (LOG_CAPACITY - 1);
+        if (
+          (this.logOld[i] & OWNER_MASK) === smallID &&
+          (this.logNew[i] & OWNER_MASK) !== smallID &&
+          (this.logNew[i] & OWNER_MASK) !== 0
+        ) {
+          n++;
+        }
+      }
+    }
+    return n;
   }
 
   private computeMarkers(gameView: GameView, tick: number): void {
@@ -249,6 +285,19 @@ export class TimeWarp {
           ring: o.kind === "attack" ? 0 : 3,
         });
       }
+    }
+    // Ghost armies of every player, for a few seconds where they rose
+    for (const p of gameView.playerViews()) {
+      const g = p.lastGhost();
+      if (g === null || tick - g.tick > GHOST_MARK_TICKS) continue;
+      if (FogOfWar.current?.hidesTile(g.tile)) continue;
+      out.push({
+        x: g.tile % this.w,
+        y: (g.tile / this.w) | 0,
+        text: `👻 ${p.displayName()}`,
+        color: "rgba(196,181,253,1)",
+        ring: 8,
+      });
     }
     if (out.length > 0 || this.markers.length > 0) this.markersDirty = true;
     this.markers = out;

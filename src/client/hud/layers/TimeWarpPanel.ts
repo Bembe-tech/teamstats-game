@@ -9,14 +9,22 @@ import {
   ECHO_EARLIEST_TICK_AFTER_SPAWN,
   ECHO_MAX_USES,
   ECHO_WINDOW_TICKS,
+  GHOST_MAX_USES,
+  GHOST_TROOP_PERCENT,
+  GHOST_WINDOW_TICKS,
   ORDER_MAX_PENDING,
   PAST_VIEW_MAX_SECONDS,
   echoBlock,
   echoCost,
+  ghostBlock,
+  ghostCost,
 } from "../../../core/game/TimeWarp";
 import { Controller } from "../../Controller";
 import { TimeWarp } from "../../TimeWarp";
-import { SendTimeEchoIntentEvent } from "../../Transport";
+import {
+  SendTimeEchoIntentEvent,
+  SendTimeGhostIntentEvent,
+} from "../../Transport";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 
@@ -112,6 +120,7 @@ export class TimeWarpPanel extends LitElement implements Controller {
           : this.renderViews(warp, avail, viewing)}
         ${me && me.isAlive() ? this.renderOrders(warp) : nothing}
         ${me ? this.renderEcho() : nothing}
+        ${me ? this.renderGhost(warp) : nothing}
       </div>
     `;
   }
@@ -222,6 +231,83 @@ export class TimeWarpPanel extends LitElement implements Controller {
             </div>`
           : nothing}
       </div>
+    `;
+  }
+
+  private ghostSentAt = -1000;
+
+  private renderGhost(warp: TimeWarp) {
+    const me = this.game.myPlayer()!;
+    const now = this.game.ticks();
+    const state = { used: me.ghostUses(), readyTick: me.ghostReadyTick() };
+    const gold = me.gold();
+    let block: string = ghostBlock(
+      true,
+      me.isAlive(),
+      this.game.inSpawnPhase(),
+      this.game.ticksSinceStart(),
+      now,
+      state,
+      gold,
+    );
+    if (
+      block === "ok" &&
+      warp.lostRecently(me.smallID(), GHOST_WINDOW_TICKS / 10) === 0
+    ) {
+      block = "nothing_lost";
+    }
+    const pending = now - this.ghostSentAt < 20;
+    let status = "";
+    switch (block) {
+      case "ok":
+        status = translateText("time_warp.ghost_cost", {
+          gold: renderNumber(Number(ghostCost(gold))),
+          pct: GHOST_TROOP_PERCENT,
+        });
+        break;
+      case "nothing_lost":
+        status = translateText("time_warp.ghost_nothing", {
+          s: GHOST_WINDOW_TICKS / 10,
+        });
+        break;
+      case "cooldown":
+        status = translateText("time_warp.echo_cooldown", {
+          s: Math.ceil((state.readyTick - now) / 10),
+        });
+        break;
+      case "gold":
+        status = translateText("time_warp.ghost_gold");
+        break;
+      case "no_uses":
+        status = translateText("time_warp.echo_none");
+        break;
+    }
+    if (!me.isAlive() || block === "too_early" || block === "spawn") {
+      return nothing;
+    }
+    return html`
+      <button
+        class="rounded px-2 py-1 text-left ${block === "ok" && !pending
+          ? "bg-violet-800 hover:bg-violet-700"
+          : "bg-gray-700 opacity-60 cursor-not-allowed"}"
+        ?disabled=${block !== "ok" || pending}
+        title=${translateText("time_warp.ghost_hint", {
+          s: GHOST_WINDOW_TICKS / 10,
+          pct: GHOST_TROOP_PERCENT,
+        })}
+        @click=${() => {
+          this.ghostSentAt = this.game.ticks();
+          this.eventBus.emit(new SendTimeGhostIntentEvent());
+        }}
+      >
+        👻 ${translateText("time_warp.ghost")}
+        (${GHOST_MAX_USES - state.used}/${GHOST_MAX_USES})
+      </button>
+      ${status
+        ? html`<div class="text-[10px] text-gray-300 leading-tight">
+            ${status}
+          </div>`
+        : nothing}
     `;
   }
 

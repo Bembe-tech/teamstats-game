@@ -57,7 +57,8 @@ export type Intent =
   | UpdateGameConfigIntent
   | ToggleGameStartTimer
   | TimeEchoIntent
-  | DelayedOrderIntent;
+  | DelayedOrderIntent
+  | TimeGhostIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -859,6 +860,12 @@ export const TimeEchoIntentSchema = z.object({
 });
 export type TimeEchoIntent = z.infer<typeof TimeEchoIntentSchema>;
 
+// TeamStats.Pro "OpenFront 4D": raise a ghost army (see TimeGhostExecution)
+export const TimeGhostIntentSchema = z.object({
+  type: z.literal("time_ghost"),
+});
+export type TimeGhostIntent = z.infer<typeof TimeGhostIntentSchema>;
+
 // TeamStats.Pro "OpenFront 4D": an attack, boat or build that fires `delay`
 // ticks after the turn it arrives in (see execution/DelayedOrderExecution)
 export const DelayedOrderIntentSchema = z.object({
@@ -900,6 +907,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   ToggleGameStartTimerIntentSchema,
   TimeEchoIntentSchema,
   DelayedOrderIntentSchema,
+  TimeGhostIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

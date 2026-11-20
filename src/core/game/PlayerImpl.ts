@@ -61,7 +61,7 @@ import {
   bumpTraversalGeneration,
   tileTraversalScratch,
 } from "./TileTraversalScratch";
-import type { DelayedOrderView } from "./TimeWarp";
+import type { DelayedOrderView, GhostView } from "./TimeWarp";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -126,6 +126,9 @@ export class PlayerImpl implements Player {
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
   private _delayedOrders: DelayedOrderView[] = [];
+  private _ghostUses = 0;
+  private _ghostReadyTick = 0;
+  private _lastGhost: GhostView | null = null;
   private _echoUses = 0;
   private _echoReadyTick = 0;
   private _timeShieldUntil = 0;
@@ -384,6 +387,9 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
       delayedOrders: this._delayedOrders,
+      ghostUses: this._ghostUses,
+      ghostReadyTick: this._ghostReadyTick,
+      lastGhost: this._lastGhost,
       echoUses: this._echoUses,
       echoReadyTick: this._echoReadyTick,
       timeShieldUntil: this._timeShieldUntil,
@@ -1325,6 +1331,24 @@ export class PlayerImpl implements Player {
 
   addCrownTicks(ticks: number): void {
     this._crownTicks += ticks;
+  }
+
+  ghostUses(): number {
+    return this._ghostUses;
+  }
+
+  ghostReadyTick(): number {
+    return this._ghostReadyTick;
+  }
+
+  lastGhost(): GhostView | null {
+    return this._lastGhost;
+  }
+
+  markGhost(readyTick: number, ghost: GhostView): void {
+    this._ghostUses++;
+    this._ghostReadyTick = readyTick;
+    this._lastGhost = ghost;
   }
 
   delayedOrders(): DelayedOrderView[] {

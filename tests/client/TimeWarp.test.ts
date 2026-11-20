@@ -43,13 +43,20 @@ function view(incoming: object[] = []) {
     isFriendly: () => false,
     outgoingAttacks: () => [],
     incomingAttacks: () => incoming,
+    delayedOrders: () => [],
+    echoUses: () => 0,
+    displayName: () => "me",
   };
   return {
     myPlayer: () => me,
     inSpawnPhase: () => false,
-    playerBySmallID: (id: number) => ({ isPlayer: () => id !== 0 }),
+    playerBySmallID: (id: number) => ({
+      isPlayer: () => id !== 0,
+      displayName: () => `p${id}`,
+    }),
     motionPlans: () => new Map(),
     isLand: () => true,
+    playerViews: () => [me],
   } as never;
 }
 

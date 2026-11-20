@@ -53,6 +53,53 @@ export function echoRestoreCap(currentTiles: number): number {
   );
 }
 
+// ── Ghosts of the past ──
+// A ghost army rises on land you lost in the last GHOST_WINDOW_TICKS (the
+// newest lost tile the taker still holds) and attacks the taker from there.
+// It costs GHOST_TROOP_PERCENT of your troops (they become the ghost army)
+// and GHOST_GOLD_PERCENT of your gold (at least GHOST_MIN_GOLD).
+export const GHOST_WINDOW_TICKS = 150;
+export const GHOST_MAX_USES = 2;
+export const GHOST_COOLDOWN_TICKS = 1200;
+export const GHOST_TROOP_PERCENT = 25;
+export const GHOST_GOLD_PERCENT = 10n;
+export const GHOST_MIN_GOLD = 50_000n;
+/** How long every client marks a ghost's rising spot on the map. */
+export const GHOST_MARK_TICKS = 80;
+
+export function ghostCost(gold: bigint): bigint {
+  const pct = (gold * GHOST_GOLD_PERCENT) / 100n;
+  return pct > GHOST_MIN_GOLD ? pct : GHOST_MIN_GOLD;
+}
+
+/** Why a player may not raise a ghost right now ("ok" when they may). */
+export function ghostBlock(
+  enabled: boolean,
+  alive: boolean,
+  inSpawnPhase: boolean,
+  ticksSinceSpawnPhase: number,
+  now: number,
+  state: EchoState,
+  gold: bigint,
+): EchoBlock {
+  if (!enabled) return "disabled";
+  if (!alive) return "dead";
+  if (inSpawnPhase) return "spawn";
+  if (ticksSinceSpawnPhase < ECHO_EARLIEST_TICK_AFTER_SPAWN) return "too_early";
+  if (state.used >= GHOST_MAX_USES) return "no_uses";
+  if (now < state.readyTick) return "cooldown";
+  if (gold < GHOST_MIN_GOLD) return "gold";
+  return "ok";
+}
+
+/** The newest ghost of a player, as every client sees it. */
+export interface GhostView {
+  tile: number;
+  tick: number;
+  /** smallID of the player the ghost attacks */
+  target: number;
+}
+
 // ── Delayed orders (attack / boat / build that fires later) ──
 export const ORDER_MIN_DELAY_TICKS = 30; // 3 s
 export const ORDER_MAX_DELAY_TICKS = 600; // 60 s
