@@ -16,6 +16,8 @@
 //   Warship       -> Fighter: takes off from the nearest own airport, patrols
 //                    its patrol tile and shoots planes down (FighterExecution)
 //
+// Fighters intercept cargo planes (they land at the fighter owner's airport
+// with their gold) and shoot troop planes and other fighters down.
 // Planes can only be shot down by fighters: SAMs never target them (they only
 // shoot nukes), warships do not exist (they are fighters) and nukes leave
 // planes in the air alone.

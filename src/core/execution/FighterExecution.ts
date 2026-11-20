@@ -3,8 +3,11 @@
 // off from the nearest own airport, flies to its patrol tile and circles it.
 // Enemy planes in sight (troop planes first, then fighters, then cargo planes
 // not flying to us or an ally) are chased up to FIGHTER_LEASH from the patrol
-// tile and shot: troop and cargo planes fall with one hit, fighters take
-// FIGHTER_DAMAGE per hit. Fighters are the only thing that shoots planes down.
+// tile. A troop plane falls with one hit, fighters take FIGHTER_DAMAGE per
+// hit, and a cargo plane is intercepted like a warship takes a trade ship: it
+// becomes ours and lands at our nearest airport, and we get its gold
+// (CargoPlaneExecution). With no airport left it is shot down instead.
+// Fighters are the only thing that can shoot planes down.
 import {
   chebyshev,
   FIGHTER_DAMAGE,
@@ -106,8 +109,12 @@ export class FighterExecution implements Execution {
     if (type === UnitType.Warship) {
       target.modifyHealth(-FIGHTER_DAMAGE, me);
       if (!target.isActive()) this.fighter.recordKill(UnitType.Warship);
+    } else if (type === UnitType.TradeShip && this.hasAirport(me)) {
+      // Cargo plane: intercepted, it lands at our airport with its gold
+      me.captureUnit(target);
+      this.fighter.recordTradeCapture();
     } else {
-      // Troop or cargo plane: shot down, troops and cargo are lost
+      // Troop plane (or cargo with nowhere to land): shot down
       target.delete(true, me);
       if (type === UnitType.TransportShip) {
         this.fighter.recordKill(UnitType.TransportShip);
@@ -115,10 +122,19 @@ export class FighterExecution implements Execution {
         this.fighter.recordTradeCapture();
       }
     }
-    if (!target.isActive()) {
+    if (!target.isActive() || target.owner() === me) {
       this.fighter.setTargetUnit(undefined);
       this.fighter.touch();
     }
+  }
+
+  private hasAirport(p: Player): boolean {
+    return p
+      .units(UnitType.Port)
+      .some(
+        (a) =>
+          a.isActive() && !a.isUnderConstruction() && !a.isMarkedForDeletion(),
+      );
   }
 
   private isEnemyPlane(unit: Unit): boolean {

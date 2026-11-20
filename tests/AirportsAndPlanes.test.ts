@@ -144,6 +144,39 @@ describe("Airports and Planes", () => {
     expect(game.owner(game.ref(85, 85))).toBe(q);
   });
 
+  test("a fighter intercepts a cargo plane and gets its gold", async () => {
+    // Self Economy: p's cargo flies between p's own two airports, past q
+    const { game, p, q } = await makeGame(true, { homeEconomy: true });
+    for (let x = 30; x < 65; x++) {
+      for (let y = 0; y < 30; y++) p.conquer(game.ref(x, y));
+    }
+    constructionExecution(game, p, 5, 5, UnitType.Port);
+    constructionExecution(game, p, 60, 5, UnitType.Port);
+    constructionExecution(game, q, 80, 80, UnitType.Port);
+    // q's fighter patrols over p's route
+    game.addExecution(
+      new ConstructionExecution(q, UnitType.Warship, game.ref(32, 6)),
+    );
+    executeTicks(game, 40);
+    const [a, b] = p.units(UnitType.Port);
+    game.addExecution(new CargoPlaneExecution(p, a, b));
+    executeTicks(game, 3);
+    const plane = p.units(UnitType.TradeShip)[0];
+    expect(plane).toBeDefined();
+    let caught = false;
+    for (let i = 0; i < 40 && plane.isActive(); i++) {
+      executeTicks(game, 1);
+      if (plane.owner() === q) caught = true;
+    }
+    expect(caught).toBe(true);
+    const qGold = q.gold();
+    executeTicks(game, 80);
+    expect(plane.isActive()).toBe(false);
+    expect(plane.wasDestroyedByEnemy()).toBe(false);
+    // Landed at q's airport: q got the cargo gold
+    expect(q.gold() - qGold).toBeGreaterThan(20_000n);
+  });
+
   test("a nuke does not bring a plane down", async () => {
     const { game, p, q } = await makeGame(true, { infiniteGold: true });
     constructionExecution(game, p, 15, 15, UnitType.Port);
