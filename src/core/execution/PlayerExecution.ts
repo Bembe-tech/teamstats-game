@@ -128,6 +128,10 @@ export class PlayerExecution implements Execution {
     // Perf: We fuse bounds calculations into the initial DFS flood, returning packed Int32Array bounds
     // instead of scanning every TileRef and allocating hundreds of Object {min, max} Cells.
     const { clusters, boxes } = this.calculateClusters();
+    // Airports and Planes: no annexation of surrounded land, so a troop plane's
+    // landing zone inside enemy land is not taken away at once (it falls only
+    // to attacks, like any land)
+    const annex = !this.mg.config().airports();
 
     if (clusters.length === 0) {
       this.player.largestClusterBoundingBox = null;
@@ -146,7 +150,7 @@ export class PlayerExecution implements Execution {
         boxes[2],
         boxes[3],
       );
-      if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+      if (annex && surroundedBy && !surroundedBy.isFriendly(this.player)) {
         this.removeCluster(clusters[0]);
       }
       return;
@@ -276,7 +280,7 @@ export class PlayerExecution implements Execution {
       boxes[lIdx + 2],
       boxes[lIdx + 3],
     );
-    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+    if (annex && surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(largestCluster);
     }
 
@@ -286,6 +290,7 @@ export class PlayerExecution implements Execution {
       const cluster = clusters[i];
       const idx = i * 4;
       if (
+        annex &&
         this.isSurrounded(
           cluster,
           boxes[idx],

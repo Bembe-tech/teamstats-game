@@ -79,6 +79,11 @@ export class NationWarshipBehavior {
         continue;
       }
       const tile = this.game.ref(randX, randY);
+      // Airports and Planes: a fighter patrols over own land too
+      if (this.game.config().airports()) {
+        if (this.game.owner(tile) !== this.player) continue;
+        return tile;
+      }
       // Sanity check
       if (!this.game.isWater(tile)) {
         continue;

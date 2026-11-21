@@ -30,6 +30,10 @@ const LENGTH_TILES: Record<string, number> = {
 const SHAPE_LENGTH = 52;
 const TRAIL_POINTS = 10;
 const PUFF_MS = 700;
+const HEADING_HISTORY = 4;
+/** Max turn speed in radians per second. */
+const PLANE_TURN_RATE = 3;
+const FIGHTER_TURN_RATE = 6;
 
 interface Track {
   fromX: number;
@@ -42,6 +46,12 @@ interface Track {
   trail: { x: number; y: number }[];
   lastTrailAt: number;
   seen: number;
+  /** Last few tiles the plane stood on (for the fighters' heading). */
+  hist: { x: number; y: number }[];
+  /** Straight route (start, destination) of troop and cargo planes. */
+  line: { ox: number; oy: number; dest: number } | null;
+  frameAt: number;
+  fresh: boolean;
 }
 
 export class AirOverlay {
@@ -128,8 +138,22 @@ export class AirOverlay {
       if (!u.isActive()) continue;
       const t = this.track(u, now);
       const k = Math.min(1, (now - t.at) / this.tickMs);
-      const wx = t.fromX + (t.toX - t.fromX) * k;
-      const wy = t.fromY + (t.toY - t.fromY) * k;
+      let wx = t.fromX + (t.toX - t.fromX) * k;
+      let wy = t.fromY + (t.toY - t.fromY) * k;
+      if (t.line !== null) {
+        // Glide on the straight route instead of the rounded tile steps
+        const ex = this.game.x(t.line.dest) - t.line.ox;
+        const ey = this.game.y(t.line.dest) - t.line.oy;
+        const len2 = ex * ex + ey * ey;
+        if (len2 > 0) {
+          const f = Math.max(
+            0,
+            Math.min(1, ((wx - t.line.ox) * ex + (wy - t.line.oy) * ey) / len2),
+          );
+          wx = t.line.ox + ex * f;
+          wy = t.line.oy + ey * f;
+        }
+      }
       if (now - t.lastTrailAt > 90) {
         t.trail.push({ x: wx, y: wy });
         if (t.trail.length > TRAIL_POINTS) t.trail.shift();
@@ -300,12 +324,18 @@ export class AirOverlay {
         toX: x,
         toY: y,
         at: now,
-        heading:
-          lx === x && ly === y ? 0 : Math.atan2(y - ly, x - lx) + Math.PI / 2,
+        heading: 0,
         tile,
         trail: [],
         lastTrailAt: 0,
         seen: this.frame,
+        hist: [
+          { x: lx, y: ly },
+          { x, y },
+        ],
+        line: null,
+        frameAt: now,
+        fresh: true,
       };
       this.tracks.set(u.id(), t);
     } else if (t.tile !== tile) {
@@ -316,12 +346,63 @@ export class AirOverlay {
       t.toY = y;
       t.at = now;
       t.tile = tile;
-      if (x !== t.fromX || y !== t.fromY) {
-        t.heading = Math.atan2(y - t.fromY, x - t.fromX) + Math.PI / 2;
-      }
+      t.hist.push({ x, y });
+      if (t.hist.length > HEADING_HISTORY) t.hist.shift();
     }
     t.seen = this.frame;
+    this.steer(u, t, now);
     return t;
+  }
+
+  /**
+   * Turns the plane smoothly toward where it is going. Troop and cargo planes
+   * fly a straight line to a known point, so they face that point (the tiles
+   * of a straight line zig-zag by rounding, facing each step made them twitch).
+   * Fighters face their movement over the last few ticks.
+   */
+  private steer(u: UnitView, t: Track, now: number): void {
+    const k = Math.min(1, (now - t.at) / this.tickMs);
+    const px = t.fromX + (t.toX - t.fromX) * k;
+    const py = t.fromY + (t.toY - t.fromY) * k;
+    let dest: number | undefined;
+    if (u.type() === UnitType.TransportShip) {
+      dest = u.targetTile();
+    } else if (u.type() === UnitType.TradeShip) {
+      const id = u.targetUnitId();
+      dest = id === undefined ? undefined : this.game.unit(id)?.tile();
+    }
+    if (dest === undefined) {
+      t.line = null;
+    } else if (t.line === null || t.line.dest !== dest) {
+      t.line = { ox: px, oy: py, dest };
+    }
+    let dx = 0;
+    let dy = 0;
+    if (dest !== undefined) {
+      dx = this.game.x(dest) - px;
+      dy = this.game.y(dest) - py;
+    }
+    if (dx * dx + dy * dy < 4) {
+      const a = t.hist[0];
+      const b = t.hist[t.hist.length - 1];
+      dx = b.x - a.x;
+      dy = b.y - a.y;
+    }
+    const dt = Math.min(0.1, Math.max(0, (now - t.frameAt) / 1000));
+    t.frameAt = now;
+    if (dx === 0 && dy === 0) return;
+    const want = Math.atan2(dy, dx) + Math.PI / 2;
+    if (t.fresh) {
+      t.heading = want;
+      t.fresh = false;
+      return;
+    }
+    let diff = want - t.heading;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    const maxTurn =
+      (u.type() === UnitType.Warship ? FIGHTER_TURN_RATE : PLANE_TURN_RATE) *
+      dt;
+    t.heading += Math.max(-maxTurn, Math.min(maxTurn, diff));
   }
 
   /** Drops planes that are gone; ones a fighter was shooting at leave a puff. */

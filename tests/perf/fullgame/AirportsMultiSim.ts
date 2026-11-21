@@ -362,6 +362,25 @@ async function main() {
         desync: desync ?? "none",
         ...stats,
         airportsStanding: ref.units(UnitType.Port).length,
+        nationsAlive: ref
+          .players()
+          .filter((p) => p.type() === PlayerType.Nation && p.isAlive()).length,
+        nationsWithAirport: ref
+          .players()
+          .filter(
+            (p) =>
+              p.type() === PlayerType.Nation &&
+              p.isAlive() &&
+              p.units(UnitType.Port).length > 0,
+          ).length,
+        nationsInlandOnly: ref
+          .players()
+          .filter(
+            (p) =>
+              p.type() === PlayerType.Nation &&
+              p.isAlive() &&
+              !Array.from(p.borderTiles()).some((t) => ref.isShore(t)),
+          ).length,
         planesFlownByType: Object.fromEntries(kinds),
         alive: ref.players().filter((p) => p.isAlive()).length,
       },

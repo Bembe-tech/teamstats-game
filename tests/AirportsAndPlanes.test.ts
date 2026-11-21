@@ -115,6 +115,17 @@ describe("Airports and Planes", () => {
     expect(q.isAlive()).toBe(true);
   });
 
+  test("a landing zone inside enemy land is not annexed", async () => {
+    const { game, p, q } = await makeGame(true);
+    // q keeps a thin army so the landing holds
+    q.removeTroops(q.troops() - 100);
+    const target = game.ref(85, 85);
+    game.addExecution(new AirDropExecution(p, target, 50_000));
+    executeTicks(game, 60);
+    expect(game.owner(target)).toBe(p);
+    expect(p.numTilesOwned()).toBeGreaterThan(30 * 30 + 1);
+  });
+
   test("troop planes have a cooldown", async () => {
     const { game, p } = await makeGame(true);
     game.addExecution(new AirDropExecution(p, game.ref(85, 85), 1000));

@@ -446,7 +446,10 @@ export class NationStructureBehavior {
         )
       : this.player.unitsOwned(UnitType.City);
     this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
-    const hasCoastalTiles = this._sharedWaterComponents !== null;
+    // Airports and Planes: an airport (Port) needs no coast, every nation can
+    // build one
+    const hasCoastalTiles =
+      config.airports() || this._sharedWaterComponents !== null;
 
     const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
 
@@ -838,7 +841,7 @@ export class NationStructureBehavior {
 
   private structureSpawnTile(type: UnitType): TileRef | null {
     const tiles =
-      type === UnitType.Port
+      type === UnitType.Port && !this.game.config().airports()
         ? this.randCoastalTileArray(25)
         : randTerritoryTileArray(this.random, this.game, this.player, 25);
     if (tiles.length === 0) return null;
