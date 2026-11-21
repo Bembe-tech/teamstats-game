@@ -9,6 +9,9 @@ export const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 export const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 export const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 export const portIcon = assetUrl("images/PortIcon.svg");
+// TeamStats.Pro Airports and Planes: the port is an airport, the warship a fighter
+export const airportIcon = assetUrl("images/AirplaneIconWhite.svg");
+export const fighterIcon = assetUrl("images/FighterIconWhite.svg");
 export const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 export const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 export const soldierIcon = assetUrl("images/SoldierIcon.svg");

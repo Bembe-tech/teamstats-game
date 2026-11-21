@@ -15,10 +15,12 @@ import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
+  airportIcon,
   atomBombIcon,
   cityIcon,
   defensePostIcon,
   factoryIcon,
+  fighterIcon,
   goldCoinIcon,
   hydrogenBombIcon,
   mirvIcon,
@@ -140,6 +142,8 @@ export class UnitDisplay extends LitElement implements Controller {
       return null;
     }
 
+    // Airports and Planes: the port is an airport, the warship a fighter
+    const air = this.game.config().airports();
     return html`
       <div class="border-t border-white/10 p-0.5 w-full">
         <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
@@ -158,10 +162,10 @@ export class UnitDisplay extends LitElement implements Controller {
             this.keybinds["buildFactory"]?.key ?? "2",
           )}
           ${this.renderUnitItem(
-            portIcon,
+            air ? airportIcon : portIcon,
             this._port,
             UnitType.Port,
-            "port",
+            air ? "airport" : "port",
             this.keybinds["buildPort"]?.key ?? "3",
           )}
           ${this.renderUnitItem(
@@ -186,10 +190,10 @@ export class UnitDisplay extends LitElement implements Controller {
             this.keybinds["buildSamLauncher"]?.key ?? "6",
           )}
           ${this.renderUnitItem(
-            warshipIcon,
+            air ? fighterIcon : warshipIcon,
             this._warships,
             UnitType.Warship,
-            "warship",
+            air ? "fighter" : "warship",
             this.keybinds["buildWarship"]?.key ?? "7",
           )}
           ${this.renderUnitItem(

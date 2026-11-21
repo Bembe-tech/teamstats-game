@@ -82,6 +82,7 @@ describe("PlayerInfoOverlay", () => {
     config: () => ({
       isUnitDisabled: () => true,
       maxTroops: () => 1000,
+      airports: () => false,
     }),
     teamClanTag: () => undefined,
   });

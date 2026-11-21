@@ -174,7 +174,7 @@
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
       "factory": "Creates railroads and spawns trains",
-      "fighter": "Patrols the sky and shoots down enemy planes",
+      "fighter": "Intercepts cargo planes and shoots down troop planes and fighters",
       "hydrogen_bomb": "Large explosion",
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
