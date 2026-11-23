@@ -1,3 +1,4 @@
+import { airportsOn, stepToward, TROOP_PLANE_SPEED } from "../game/Airports";
 import {
   Execution,
   Game,
@@ -9,7 +10,10 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
-import { SAMMissileExecution } from "./SAMMissileExecution";
+import {
+  SAMMissileExecution,
+  troopPlanesTargetedBySAM,
+} from "./SAMMissileExecution";
 
 type Target = {
   unit: Unit;
@@ -271,6 +275,9 @@ class SAMTargetingSystem {
   }
 }
 
+/** How far ahead (ticks) a SAM follows a troop plane's flight to aim. */
+const TROOP_PLANE_AIM_TICKS = 60;
+
 export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
@@ -340,6 +347,12 @@ export class SAMLauncherExecution implements Execution {
       }
       this.sam.reloadMissile();
     }
+    // Airports and Planes: troop planes are shot down too, without using a
+    // missile of the launcher (no reload), so it runs before the cooldown check.
+    if (airportsOn(this.mg)) {
+      this.shootTroopPlane(ticks);
+    }
+
     if (this.sam.isInCooldown()) {
       return;
     }
@@ -377,6 +390,62 @@ export class SAMLauncherExecution implements Execution {
           target.tile,
         ),
       );
+    }
+  }
+
+  /**
+   * Airports and Planes: fires at one enemy troop plane a tick, aimed like a
+   * nuke shot. The plane flies straight to its target tile at
+   * TROOP_PLANE_SPEED, so its tile k ticks from now is known exactly; the SAM
+   * picks the first such tile inside its range that the missile reaches no
+   * later than the plane (and before it lands) and fires when the missile has
+   * to leave now. The shot does not use a missile, so it never reloads.
+   * Integer tile math only, so every client fires on the same tick.
+   */
+  private shootTroopPlane(ticks: number): void {
+    if (this.mg.unitCount(UnitType.TransportShip) === 0) return;
+    const sam = this.sam!;
+    const samTile = sam.tile();
+    const samOwner = sam.owner();
+    const config = this.mg.config();
+    const missileSpeed = config.defaultSamMissileSpeed();
+    const planes = this.mg.nearbyUnits(
+      samTile,
+      config.maxSamRange() * 2,
+      UnitType.TransportShip,
+      ({ unit }) =>
+        isUnit(unit) &&
+        unit.isActive() &&
+        !troopPlanesTargetedBySAM.has(unit) &&
+        unit.owner() !== samOwner &&
+        !samOwner.isFriendly(unit.owner()),
+    );
+    if (planes.length === 0) return;
+    // Same pick on every client: lowest unit id first.
+    planes.sort((a, b) => a.unit.id() - b.unit.id());
+    for (const { unit: plane } of planes) {
+      const dst = plane.targetTile();
+      if (dst === undefined) continue;
+      let tile = plane.tile();
+      for (let k = 1; k <= TROOP_PLANE_AIM_TICKS; k++) {
+        tile = stepToward(this.mg, tile, dst, TROOP_PLANE_SPEED);
+        // It lands on this tick: too late for a missile
+        if (tile === dst) break;
+        const range = config.dynamicSamRange(sam, ticks + k);
+        if (this.mg.euclideanDistSquared(samTile, tile) > range * range) {
+          continue;
+        }
+        const missileTicks = Math.ceil(
+          this.mg.manhattanDist(samTile, tile) / missileSpeed,
+        );
+        if (missileTicks > k) continue;
+        if (k - missileTicks > 1) break; // reachable, but not time to fire yet
+        troopPlanesTargetedBySAM.add(plane);
+        this.mg.addExecution(
+          new SAMMissileExecution(samTile, samOwner, sam, plane, tile),
+        );
+        return;
+      }
     }
   }
 

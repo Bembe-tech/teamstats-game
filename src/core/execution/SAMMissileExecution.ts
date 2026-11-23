@@ -11,6 +11,12 @@ import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { NukeType } from "../StatsSchemas";
 
+/**
+ * Airports and Planes: troop planes with a SAM missile on the way (the
+ * targetedBySAM flag only exists on nukes). Per unit object, so per game.
+ */
+export const troopPlanesTargetedBySAM = new WeakSet<Unit>();
+
 export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: SteppingPathFinder<TileRef>;
@@ -47,14 +53,20 @@ export class SAMMissileExecution implements Execution {
       UnitType.HydrogenBomb,
       UnitType.MIRVWarhead,
     ];
+    // Airports and Planes: SAMs also shoot troop planes down
+    const isTroopPlane =
+      this.target.type() === UnitType.TransportShip &&
+      this.mg.config().airports();
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||
       this.target.owner() === this.SAMMissile.owner() ||
-      !nukesWhitelist.includes(this.target.type())
+      (!isTroopPlane && !nukesWhitelist.includes(this.target.type()))
     ) {
       // Clear the flag so other SAMs can re-target this nuke
-      if (this.target.isActive()) {
+      if (isTroopPlane) {
+        troopPlanesTargetedBySAM.delete(this.target);
+      } else if (this.target.isActive()) {
         this.target.setTargetedBySAM(false);
       }
       this.SAMMissile.delete(false);
@@ -75,13 +87,16 @@ export class SAMMissileExecution implements Execution {
           { unit: this.target.type() },
         );
         this.active = false;
+        if (isTroopPlane) troopPlanesTargetedBySAM.delete(this.target);
         this.target.delete(true, this._owner);
         this.SAMMissile.delete(false);
 
-        // Record stats
-        this.mg
-          .stats()
-          .bombIntercept(this._owner, this.target.type() as NukeType, 1);
+        // Record stats (a troop plane's are recorded by delete())
+        if (!isTroopPlane) {
+          this.mg
+            .stats()
+            .bombIntercept(this._owner, this.target.type() as NukeType, 1);
+        }
         return;
       } else if (result.status === PathStatus.NEXT) {
         this.SAMMissile.move(result.node);
