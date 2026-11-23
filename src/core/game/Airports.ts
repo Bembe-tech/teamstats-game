@@ -18,9 +18,11 @@
 //
 // Fighters intercept cargo planes (they land at the fighter owner's airport
 // with their gold) and shoot troop planes and other fighters down.
-// Planes can only be shot down by fighters: SAMs never target them (they only
-// shoot nukes), warships do not exist (they are fighters) and nukes leave
-// planes in the air alone.
+// SAM launchers also shoot enemy troop planes down, without using a missile
+// or starting a reload (SAMLauncherExecution); cargo planes and fighters are
+// left to fighters. Warships do not exist (they are fighters). Atom bombs,
+// hydrogen bombs and MIRV warheads destroy the planes inside the blast
+// (NukeExecution).
 //
 // Everything here is integer math on tile coordinates, so it is the same on
 // every client.
