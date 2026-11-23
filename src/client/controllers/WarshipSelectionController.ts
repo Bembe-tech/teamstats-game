@@ -18,6 +18,7 @@ import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { MoveWarshipIntentEvent } from "../Transport";
 import { GameView, UnitView } from "../view";
+import { fighterClick, moveTargetAllowed } from "./WarshipMoveTarget";
 
 const WARSHIP_SELECTION_RADIUS = 10;
 
@@ -61,6 +62,9 @@ export class WarshipSelectionController implements Controller {
   }
 
   init() {
+    // Module state outlives a game: start every game with no selection
+    fighterClick.selected = false;
+    fighterClick.consumed = null;
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
 
     this.ensureDragRectEl();
@@ -178,7 +182,17 @@ export class WarshipSelectionController implements Controller {
       if (!this.game.isValidCoord(cell.x, cell.y)) return;
       clickRef = this.game.ref(cell.x, cell.y);
     }
-    if (!this.game.isWater(clickRef)) return;
+    const isWater = this.game.isWater(clickRef);
+    const airports = this.game.config().airports();
+    if (!isWater) {
+      // Airports and Planes: selected fighters may be sent over land too.
+      // Selecting still needs a water click, so a land click with nothing
+      // selected stays an attack.
+      const hasSelection =
+        this.selectedUnit !== null || this.multiSelectedWarships.length > 0;
+      if (!hasSelection || !moveTargetAllowed(isWater, airports)) return;
+      fighterClick.consumed = event;
+    }
 
     if (this.multiSelectedWarships.length > 0) {
       const myPlayer = this.game.myPlayer();
@@ -225,11 +239,23 @@ export class WarshipSelectionController implements Controller {
       }
       return;
     }
+    const hasSelection =
+      this.selectedUnit !== null || this.multiSelectedWarships.length > 0;
+    if (
+      hasSelection &&
+      moveTargetAllowed(
+        this.game.isWater(clickRef),
+        this.game.config().airports(),
+      )
+    ) {
+      this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
+      return;
+    }
     if (!this.game.isWater(clickRef)) {
       this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
       return;
     }
-    if (this.selectedUnit || this.multiSelectedWarships.length > 0) {
+    if (hasSelection) {
       this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
       return;
     }
@@ -312,6 +338,7 @@ export class WarshipSelectionController implements Controller {
   private onUnitSelection(event: UnitSelectionEvent) {
     this.multiSelectedWarships = [];
     this.selectedUnit = null;
+    fighterClick.selected = false;
 
     if (!event.isSelected) {
       this.view.setSelectedUnits([]);
@@ -325,5 +352,7 @@ export class WarshipSelectionController implements Controller {
       this.selectedUnit = event.unit;
       this.view.setSelectedUnits(event.unit ? [event.unit.id()] : []);
     }
+    fighterClick.selected =
+      this.selectedUnit !== null || this.multiSelectedWarships.length > 0;
   }
 }

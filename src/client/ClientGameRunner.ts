@@ -78,6 +78,7 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
+import { clickTakenByFighters } from "./controllers/WarshipMoveTarget";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
@@ -1283,6 +1284,13 @@ export class ClientGameRunner {
       return;
     }
     if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+    // Airports and Planes: this land click moves the selected fighters
+    if (
+      this.gameView.config().airports() &&
+      clickTakenByFighters(event, this.gameView.isWater(tile), true)
+    ) {
       return;
     }
     if (this.myPlayer === null) {
