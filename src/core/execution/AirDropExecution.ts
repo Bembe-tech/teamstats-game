@@ -2,12 +2,11 @@
 // It is a TransportShip unit, so the boat limit, the incoming-invasion alert,
 // the cancel button and the stats all keep working. It takes off from the own
 // tile nearest to the target (no airport needed), flies straight and lands on
-// the chosen tile, where its troops attack like a boat landing. It costs gold
-// and has a cooldown (see game/Airports.ts). Only fighters can shoot it down.
+// the chosen tile, where its troops attack like a boat landing. Like a boat it
+// is free and has no cooldown. Only fighters can shoot it down.
 import { renderTroops } from "../../client/Utils";
 import {
   nearestOwnTile,
-  recordAirDrop,
   stepToward,
   TROOP_PLANE_SPEED,
 } from "../game/Airports";
@@ -74,7 +73,7 @@ export class AirDropExecution implements Execution {
         request?.reject();
       }
     }
-    // Checks land, own tile, attackable owner, plane limit, cooldown and gold
+    // Checks land, own tile, attackable owner, and plane limit
     const src = this.attacker.canBuild(UnitType.TransportShip, this.ref);
     if (src === false) {
       this.active = false;
@@ -88,7 +87,6 @@ export class AirDropExecution implements Execution {
       troops,
       targetTile: this.dst,
     });
-    recordAirDrop(mg, this.attacker);
 
     if (target.isPlayer()) {
       mg.displayIncomingUnit(

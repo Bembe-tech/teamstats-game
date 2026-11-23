@@ -11,7 +11,7 @@
 //                    grows with the distance (CargoPlaneExecution)
 //   TransportShip -> Troop plane: any land tile can be the target, it takes
 //                    off from the own tile nearest to the target and lands
-//                    on the chosen tile; costs gold and has a cooldown
+//                    on the chosen tile; free and no cooldown, like a boat
 //                    (AirDropExecution)
 //   Warship       -> Fighter: takes off from the nearest own airport, patrols
 //                    its patrol tile and shoots planes down (FighterExecution)
@@ -27,10 +27,6 @@
 import { Game, Player, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 
-/** Gold for one troop plane (a boat is free). */
-export const AIR_DROP_COST = 100_000;
-/** Ticks between two troop planes of one player (10 s). */
-export const AIR_DROP_COOLDOWN_TICKS = 100;
 /** Tiles per tick. A boat and a trade ship do 1. */
 export const CARGO_PLANE_SPEED = 2;
 export const TROOP_PLANE_SPEED = 2;
@@ -117,29 +113,10 @@ export function nearestOwnTile(
   return best;
 }
 
-// Last troop plane tick per player (by small id), per game.
-const lastAirDrop = new WeakMap<Game, Map<number, number>>();
-
-export function airDropCooldownLeft(mg: Game, player: Player): number {
-  const last = lastAirDrop.get(mg)?.get(player.smallID());
-  if (last === undefined) return 0;
-  return Math.max(0, last + AIR_DROP_COOLDOWN_TICKS - mg.ticks());
-}
-
-export function recordAirDrop(mg: Game, player: Player): void {
-  let m = lastAirDrop.get(mg);
-  if (m === undefined) {
-    m = new Map();
-    lastAirDrop.set(mg, m);
-  }
-  m.set(player.smallID(), mg.ticks());
-}
-
 /**
  * Where a troop plane to `tile` takes off, or false when it cannot be sent:
  * the target must be land the player may attack (not their own), fewer than
- * boatMaxNumber planes in the air and the cooldown over. Gold is checked by
- * canBuild (unitInfo cost).
+ * boatMaxNumber planes in the air. Like a boat it is free and has no cooldown.
  */
 export function airDropSpawn(
   mg: Game,
@@ -152,7 +129,6 @@ export function airDropSpawn(
   if (player.unitCount(UnitType.TransportShip) >= mg.config().boatMaxNumber()) {
     return false;
   }
-  if (airDropCooldownLeft(mg, player) > 0) return false;
   const other = mg.owner(tile);
   if (other === player) return false;
   if (other.isPlayer() && !player.canAttackPlayer(other)) return false;

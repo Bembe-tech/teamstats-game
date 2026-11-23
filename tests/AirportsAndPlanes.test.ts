@@ -1,13 +1,16 @@
+import {
+  clickTakenByFighters,
+  fighterClick,
+  moveTargetAllowed,
+} from "../src/client/controllers/WarshipMoveTarget";
 import { AirDropExecution } from "../src/core/execution/AirDropExecution";
 import { CargoPlaneExecution } from "../src/core/execution/CargoPlaneExecution";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
+import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { PortExecution } from "../src/core/execution/PortExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import {
-  AIR_DROP_COOLDOWN_TICKS,
-  AIR_DROP_COST,
-} from "../src/core/game/Airports";
+import { chebyshev, FIGHTER_PATROL_RADIUS } from "../src/core/game/Airports";
 import {
   Game,
   Player,
@@ -106,8 +109,8 @@ describe("Airports and Planes", () => {
     executeTicks(game, 2);
     const plane = p.units(UnitType.TransportShip)[0];
     expect(plane).toBeDefined();
-    // Paid for the plane (a little worker income came in meanwhile)
-    expect(p.gold()).toBeLessThan(gold - BigInt(AIR_DROP_COST) + 10_000n);
+    // Free like a boat
+    expect(p.gold()).toBeGreaterThanOrEqual(gold);
     executeTicks(game, 30);
     expect(plane.isActive()).toBe(false);
     expect(plane.destroyer()).toBeUndefined();
@@ -126,15 +129,18 @@ describe("Airports and Planes", () => {
     expect(p.numTilesOwned()).toBeGreaterThan(30 * 30 + 1);
   });
 
-  test("troop planes have a cooldown", async () => {
+  test("troop planes are free, have no cooldown and a limit of 3", async () => {
     const { game, p } = await makeGame(true);
-    game.addExecution(new AirDropExecution(p, game.ref(85, 85), 1000));
-    executeTicks(game, 2);
-    expect(p.canBuild(UnitType.TransportShip, game.ref(70, 90))).toBe(false);
-    executeTicks(game, AIR_DROP_COOLDOWN_TICKS);
+    p.removeGold(p.gold());
     expect(p.canBuild(UnitType.TransportShip, game.ref(70, 90))).not.toBe(
       false,
     );
+    for (const x of [85, 80, 75]) {
+      game.addExecution(new AirDropExecution(p, game.ref(x, 85), 1000));
+    }
+    executeTicks(game, 2);
+    expect(p.units(UnitType.TransportShip)).toHaveLength(3);
+    expect(p.canBuild(UnitType.TransportShip, game.ref(70, 90))).toBe(false);
   });
 
   test("a fighter shoots a troop plane down", async () => {
@@ -221,5 +227,49 @@ describe("Airports and Planes", () => {
     expect(q.canBuild(UnitType.Warship, game.ref(50, 50))).toBe(
       q.units(UnitType.Port)[0].tile(),
     );
+  });
+  test("selected fighters can be sent over land, not only water", async () => {
+    const { game, p } = await makeGame(true);
+    constructionExecution(game, p, 15, 15, UnitType.Port);
+    game.addExecution(
+      new ConstructionExecution(p, UnitType.Warship, game.ref(20, 20)),
+    );
+    executeTicks(game, 15);
+    const fighter = p.units(UnitType.Warship)[0];
+    expect(fighter).toBeDefined();
+    // Enemy land far from the first patrol tile, no water anywhere on plains
+    const target = game.ref(80, 20);
+    expect(game.isLand(target)).toBe(true);
+    game.addExecution(new MoveWarshipExecution(p, [fighter.id()], target));
+    executeTicks(game, 1);
+    expect(fighter.warshipState().patrolTile).toBe(target);
+    executeTicks(game, 40);
+    expect(chebyshev(game, fighter.tile(), target)).toBeLessThanOrEqual(
+      FIGHTER_PATROL_RADIUS,
+    );
+  });
+
+  test("client: a land click is a fighter move only in Airports and Planes", () => {
+    expect(moveTargetAllowed(true, false)).toBe(true);
+    expect(moveTargetAllowed(false, false)).toBe(false);
+    expect(moveTargetAllowed(false, true)).toBe(true);
+
+    const click = {};
+    fighterClick.selected = false;
+    fighterClick.consumed = null;
+    // Nothing selected: land click stays an attack
+    expect(clickTakenByFighters(click, false, true)).toBe(false);
+    // Selection still held (attack handler runs first)
+    fighterClick.selected = true;
+    expect(clickTakenByFighters(click, false, true)).toBe(true);
+    // Selection already cleared, but the controller used this click
+    fighterClick.selected = false;
+    fighterClick.consumed = click;
+    expect(clickTakenByFighters(click, false, true)).toBe(true);
+    expect(clickTakenByFighters({}, false, true)).toBe(false);
+    // Water clicks and normal games are untouched
+    expect(clickTakenByFighters(click, true, true)).toBe(false);
+    expect(clickTakenByFighters(click, false, false)).toBe(false);
+    fighterClick.consumed = null;
   });
 });

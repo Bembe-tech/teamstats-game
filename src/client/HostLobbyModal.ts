@@ -595,7 +595,7 @@ export class HostLobbyModal extends BaseModal {
           this.airports,
           "✈️",
           "Airports and Planes",
-          "Ports become airports, built anywhere on your land (also on maps without water). Trade ships become cargo planes flying straight between airports, longer flights pay more. Boats become troop planes: pick any land tile, troops take off from your nearest land and land right there (100K gold, 10 s cooldown). Warships become fighters that take off from an airport, patrol and shoot planes down. Only fighters can hit planes: SAMs and nukes cannot.",
+          "Ports become airports, built anywhere on your land (also on maps without water). Trade ships become cargo planes flying straight between airports, longer flights pay more. Boats become troop planes: pick any land tile, troops take off from your nearest land and land right there (free and no cooldown, like a boat, max 3 in the air). Warships become fighters that take off from an airport, patrol and shoot planes down. Only fighters can hit planes: SAMs and nukes cannot.",
           () => {
             this.airports = !this.airports;
             this.putGameConfig();
