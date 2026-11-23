@@ -422,10 +422,14 @@ export class Config {
   kingOfTheHill(): boolean {
     return this._gameConfig.kingOfTheHill ?? false;
   }
-  /** Length of a King of the Hill game in minutes (default 30). */
-  kingOfTheHillMinutes(): number {
+  /**
+   * Optional time limit of a King of the Hill game in minutes (30 is only
+   * the lobby's recommendation). null = no limit: the game ends with the
+   * normal win, crown time is just shown.
+   */
+  kingOfTheHillMinutes(): number | null {
     const m = this._gameConfig.kingOfTheHillMinutes;
-    return m !== undefined && m !== null && m > 0 ? m : 30;
+    return m !== undefined && m !== null && m > 0 ? m : null;
   }
   /** King of the Hill 2: the powered throne (game/Throne.ts). */
   kingOfTheHill2(): boolean {

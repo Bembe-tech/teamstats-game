@@ -489,9 +489,9 @@ export class SinglePlayerModal extends BaseModal {
         .inputStep=${1}
         .inputValue=${this.kingOfTheHillMinutes}
         .inputAriaLabel=${translateText("game_settings.king_of_the_hill")}
-        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
-        .defaultInputValue=${30}
-        .minValidOnEnable=${1}
+        .inputPlaceholder=${translateText(
+          "game_settings.koth_minutes_placeholder",
+        )}
         .onToggle=${this.handleKothToggle}
         .onInput=${this.handleKothMinutesInput}
         .onKeyDown=${this.handleOvertimeMinutesKeyDown}
@@ -971,12 +971,18 @@ export class SinglePlayerModal extends BaseModal {
     this.kingOfTheHillMinutes = toOptionalNumber(value);
   };
 
+  // The time limit is optional: an empty field means no limit (normal win).
   private handleKothMinutesInput = (e: Event) => {
-    const value = parseBoundedIntegerFromInput(e.target as HTMLInputElement, {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
       min: 1,
       max: 600,
       stripPattern: /[e+-]/gi,
     });
+    if (input.value.trim() === "") {
+      this.kingOfTheHillMinutes = undefined;
+      return;
+    }
     if (value === undefined) return;
     this.kingOfTheHillMinutes = value;
   };
@@ -1318,7 +1324,7 @@ export class SinglePlayerModal extends BaseModal {
                 ...(this.kingOfTheHill
                   ? {
                       kingOfTheHill: true,
-                      kingOfTheHillMinutes: this.kingOfTheHillMinutes ?? 30,
+                      kingOfTheHillMinutes: this.kingOfTheHillMinutes ?? null,
                     }
                   : {}),
                 ...(this.kingOfTheHill2

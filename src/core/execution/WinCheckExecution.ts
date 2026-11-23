@@ -40,10 +40,12 @@ export class WinCheckExecution implements Execution {
     if (this.checkRanked2v2Cancelled()) {
       return;
     }
-    // TeamStats.Pro King of the Hill: crown time decides (KingOfTheHillExecution)
+    // TeamStats.Pro King of the Hill with a time limit: crown time decides
+    // (KingOfTheHillExecution); without a limit the normal win below applies.
     // King of the Hill 2: reign time decides (ThroneExecution)
     if (
-      this.mg.config().kingOfTheHill?.() ||
+      (this.mg.config().kingOfTheHill?.() &&
+        this.mg.config().kingOfTheHillMinutes?.() !== null) ||
       this.mg.config().kingOfTheHill2?.()
     ) {
       return;

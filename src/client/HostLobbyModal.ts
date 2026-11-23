@@ -511,28 +511,30 @@ export class HostLobbyModal extends BaseModal {
           this.kingOfTheHill,
           "👑",
           "King of the Hill",
-          "The biggest player wears the crown and collects crown time. When the time runs out, whoever held the crown longest wins (in teams: the team's total). Normal map-control wins are off.",
+          "The biggest player wears the crown and collects crown time. With a time limit, whoever held the crown longest when the time runs out wins (in teams: the team's total). Without a time limit the game ends as usual and crown time is just for glory.",
           () => {
             this.kingOfTheHill = !this.kingOfTheHill;
             if (this.kingOfTheHill) this.kingOfTheHill2 = false;
-            if (this.kingOfTheHill && !this.kingOfTheHillMinutes) {
-              this.kingOfTheHillMinutes = 30;
-            }
             this.putGameConfig();
           },
           this.kingOfTheHill
             ? html`<label class="ts-mode-field"
-                >Game length
-                <input
-                  type="number"
-                  min="1"
-                  max="600"
-                  .value=${String(this.kingOfTheHillMinutes ?? 30)}
-                  @input=${this.handleKothMinutesInput}
-                  @keydown=${this.handleOvertimeMinutesKeyDown}
-                />
-                min</label
-              >`
+                  >Time limit
+                  <input
+                    type="number"
+                    min="1"
+                    max="600"
+                    placeholder="none"
+                    .value=${this.kingOfTheHillMinutes === undefined
+                      ? ""
+                      : String(this.kingOfTheHillMinutes)}
+                    @input=${this.handleKothMinutesInput}
+                    @keydown=${this.handleOvertimeMinutesKeyDown}
+                  />
+                  min</label
+                ><span class="ts-mode-hint"
+                  >Optional. Recommended: 30 min. Empty = no limit.</span
+                >`
             : nothing,
         )}
         ${card(
@@ -1652,12 +1654,19 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  // The time limit is optional: an empty field means no limit (normal win).
   private handleKothMinutesInput = (e: Event) => {
-    const value = parseBoundedIntegerFromInput(e.target as HTMLInputElement, {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
       min: 1,
       max: 600,
       stripPattern: /[e+-]/gi,
     });
+    if (input.value.trim() === "") {
+      this.kingOfTheHillMinutes = undefined;
+      this.putGameConfig();
+      return;
+    }
     if (value === undefined) return;
     this.kingOfTheHillMinutes = value;
     this.putGameConfig();
@@ -2087,7 +2096,7 @@ export class HostLobbyModal extends BaseModal {
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
       kingOfTheHillMinutes: this.kingOfTheHill
-        ? (this.kingOfTheHillMinutes ?? 30)
+        ? (this.kingOfTheHillMinutes ?? null)
         : null,
       kingOfTheHill2: this.kingOfTheHill2 ? true : null,
       kingOfTheHill2Minutes: this.kingOfTheHill2

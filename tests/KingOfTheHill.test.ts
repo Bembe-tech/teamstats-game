@@ -1,5 +1,6 @@
 // TeamStats.Pro "King of the Hill": the biggest player holds the crown and
-// collects crown time; after 30 minutes the longest holder wins.
+// collects crown time; with a time limit the longest holder wins when it
+// runs out. The limit is optional: without one the normal win applies.
 import {
   crownHolder,
   KingOfTheHillExecution,
@@ -38,6 +39,7 @@ describe("King of the Hill", () => {
   });
 
   test("after 30 minutes the longest holder wins, not the biggest", () => {
+    game.config().kingOfTheHillMinutes = () => 30;
     small.addCrownTicks(5000);
     big.addCrownTicks(100);
     game.elapsedGameSeconds = () => 30 * 60;
@@ -67,5 +69,21 @@ describe("King of the Hill", () => {
     game.elapsedGameSeconds = () => 10 * 60;
     exec.tick(20);
     expect(winner).toBe(small); // 50 ticks vs big's 20
+  });
+
+  test("no time limit: crown time counts but never ends the game", () => {
+    expect(game.config().kingOfTheHillMinutes()).toBeNull();
+    small.addCrownTicks(5000);
+    game.elapsedGameSeconds = () => 600 * 60;
+    let winner: unknown = undefined;
+    game.setWinner = (w) => {
+      winner = w;
+    };
+    const exec = new KingOfTheHillExecution();
+    exec.init(game, 0);
+    exec.tick(10);
+    expect(winner).toBeUndefined();
+    expect(exec.isActive()).toBe(true);
+    expect(big.crownTicks()).toBe(10);
   });
 });

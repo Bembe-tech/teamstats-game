@@ -1,8 +1,10 @@
 // TeamStats.Pro "King of the Hill" (lobby option kingOfTheHill).
 // The crown belongs to the player with the most land (tribes excluded), as on
 // the crown icon. Every second the crown holder gets a second of crown time.
-// When the lobby's time is up (kingOfTheHillMinutes, default 30) the player (or, in team games, the team) with the most
-// crown time wins. WinCheckExecution's land win is off in this mode.
+// The time limit is optional (kingOfTheHillMinutes; the lobby recommends 30).
+// With a limit: when the time is up the player (or, in team games, the team)
+// with the most crown time wins, and WinCheckExecution's land win is off.
+// Without a limit the game is won the normal way; crown time is just shown.
 import {
   Execution,
   Game,
@@ -28,7 +30,9 @@ export class KingOfTheHillExecution implements Execution {
     const holder = crownHolder(mg);
     if (holder !== null) holder.addCrownTicks(10);
 
-    if (mg.elapsedGameSeconds() < mg.config().kingOfTheHillMinutes() * 60) {
+    // No time limit: crown time only counts, WinCheckExecution ends the game.
+    const limit = mg.config().kingOfTheHillMinutes();
+    if (limit === null || mg.elapsedGameSeconds() < limit * 60) {
       return;
     }
 
