@@ -95,9 +95,10 @@ export function notableLobbySettings(
   if (c.kingOfTheHill)
     items.push({
       label: translateText("game_settings.king_of_the_hill"),
-      value: c.kingOfTheHillMinutes
-        ? `${c.kingOfTheHillMinutes} min`
-        : translateText("game_settings.koth_no_limit"),
+      value:
+        (c.kingOfTheHillMinutes ?? c.maxTimerValue)
+          ? `${c.kingOfTheHillMinutes ?? c.maxTimerValue} min`
+          : translateText("game_settings.koth_no_limit"),
     });
   if (c.kingOfTheHill2)
     items.push({

@@ -86,4 +86,13 @@ describe("King of the Hill", () => {
     expect(exec.isActive()).toBe(true);
     expect(big.crownTicks()).toBe(10);
   });
+
+  test("the Game length option is the time limit", async () => {
+    const g = await setup(
+      "half_land_half_ocean",
+      { kingOfTheHill: true, maxTimerValue: 20 },
+      [new PlayerInfo("a", PlayerType.Human, null, "a_id")],
+    );
+    expect(g.config().kingOfTheHillMinutes()).toBe(20);
+  });
 });

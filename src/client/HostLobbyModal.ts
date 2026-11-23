@@ -108,7 +108,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private airports: boolean = false;
   @state() private homeEconomy: boolean = false;
   @state() private kingOfTheHill: boolean = false;
-  @state() private kingOfTheHillMinutes: number | undefined = undefined;
   @state() private kingOfTheHill2: boolean = false;
   @state() private kingOfTheHill2Minutes: number = 5;
   @state() private kingOfTheHill2ArmyShare: number = 30;
@@ -511,30 +510,17 @@ export class HostLobbyModal extends BaseModal {
           this.kingOfTheHill,
           "👑",
           "King of the Hill",
-          "The biggest player wears the crown and collects crown time. With a time limit, whoever held the crown longest when the time runs out wins (in teams: the team's total). Without a time limit the game ends as usual and crown time is just for glory.",
+          "The biggest player wears the crown and collects crown time. If the game has a Game length, whoever held the crown longest when the time runs out wins (in teams: the team's total). Without one the game ends as usual and crown time is just for glory.",
           () => {
             this.kingOfTheHill = !this.kingOfTheHill;
             if (this.kingOfTheHill) this.kingOfTheHill2 = false;
             this.putGameConfig();
           },
           this.kingOfTheHill
-            ? html`<label class="ts-mode-field"
-                  >Time limit
-                  <input
-                    type="number"
-                    min="1"
-                    max="600"
-                    placeholder="none"
-                    .value=${this.kingOfTheHillMinutes === undefined
-                      ? ""
-                      : String(this.kingOfTheHillMinutes)}
-                    @input=${this.handleKothMinutesInput}
-                    @keydown=${this.handleOvertimeMinutesKeyDown}
-                  />
-                  min</label
-                ><span class="ts-mode-hint"
-                  >Optional. Recommended: 30 min. Empty = no limit.</span
-                >`
+            ? html`<span class="ts-mode-hint"
+                >⏱ Time limit is optional: turn on <b>Game length</b> in Options
+                (recommended: 30 min). Without it the game ends as usual.</span
+              >`
             : nothing,
         )}
         ${card(
@@ -1436,7 +1422,6 @@ export class HostLobbyModal extends BaseModal {
     this.airports = false;
     this.homeEconomy = false;
     this.kingOfTheHill = false;
-    this.kingOfTheHillMinutes = undefined;
     this.kingOfTheHill2 = false;
     this.kingOfTheHill2Minutes = 5;
     this.kingOfTheHill2ArmyShare = 30;
@@ -1641,34 +1626,6 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.overtime = checked;
     this.overtimeStartMinutes = toOptionalNumber(value);
-    this.putGameConfig();
-  };
-
-  // TeamStats.Pro King of the Hill: on/off + length in minutes
-  private handleKothToggle = (
-    checked: boolean,
-    value: number | string | undefined,
-  ) => {
-    this.kingOfTheHill = checked;
-    this.kingOfTheHillMinutes = toOptionalNumber(value);
-    this.putGameConfig();
-  };
-
-  // The time limit is optional: an empty field means no limit (normal win).
-  private handleKothMinutesInput = (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 1,
-      max: 600,
-      stripPattern: /[e+-]/gi,
-    });
-    if (input.value.trim() === "") {
-      this.kingOfTheHillMinutes = undefined;
-      this.putGameConfig();
-      return;
-    }
-    if (value === undefined) return;
-    this.kingOfTheHillMinutes = value;
     this.putGameConfig();
   };
 
@@ -2095,9 +2052,7 @@ export class HostLobbyModal extends BaseModal {
       airports: this.airports ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
-      kingOfTheHillMinutes: this.kingOfTheHill
-        ? (this.kingOfTheHillMinutes ?? null)
-        : null,
+      kingOfTheHillMinutes: null,
       kingOfTheHill2: this.kingOfTheHill2 ? true : null,
       kingOfTheHill2Minutes: this.kingOfTheHill2
         ? this.kingOfTheHill2Minutes

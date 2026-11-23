@@ -121,7 +121,6 @@ const DEFAULT_OPTIONS = {
   airports: false,
   homeEconomy: false,
   kingOfTheHill: false,
-  kingOfTheHillMinutes: undefined as number | undefined,
   kingOfTheHill2: false,
   kingOfTheHill2Minutes: undefined as number | undefined,
   doomsdayClock: false,
@@ -219,8 +218,6 @@ export class SinglePlayerModal extends BaseModal {
   @state() private airports: boolean = DEFAULT_OPTIONS.airports;
   @state() private homeEconomy: boolean = DEFAULT_OPTIONS.homeEconomy;
   @state() private kingOfTheHill: boolean = DEFAULT_OPTIONS.kingOfTheHill;
-  @state() private kingOfTheHillMinutes: number | undefined =
-    DEFAULT_OPTIONS.kingOfTheHillMinutes;
   @state() private kingOfTheHill2: boolean = DEFAULT_OPTIONS.kingOfTheHill2;
   @state() private kingOfTheHill2Minutes: number | undefined =
     DEFAULT_OPTIONS.kingOfTheHill2Minutes;
@@ -482,21 +479,6 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"game_settings.king_of_the_hill"}
-        .checked=${this.kingOfTheHill}
-        .inputMin=${1}
-        .inputMax=${600}
-        .inputStep=${1}
-        .inputValue=${this.kingOfTheHillMinutes}
-        .inputAriaLabel=${translateText("game_settings.king_of_the_hill")}
-        .inputPlaceholder=${translateText(
-          "game_settings.koth_minutes_placeholder",
-        )}
-        .onToggle=${this.handleKothToggle}
-        .onInput=${this.handleKothMinutesInput}
-        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
-      ></toggle-input-card>`,
-      html`<toggle-input-card
         .labelKey=${"game_settings.king_of_the_hill_2"}
         .checked=${this.kingOfTheHill2}
         .inputMin=${1}
@@ -610,6 +592,11 @@ export class SinglePlayerModal extends BaseModal {
                   {
                     labelKey: "game_settings.home_economy",
                     checked: this.homeEconomy,
+                  },
+                  {
+                    // Time limit = the normal Game length option (optional).
+                    labelKey: "game_settings.king_of_the_hill",
+                    checked: this.kingOfTheHill,
                   },
                   {
                     labelKey: "game_settings.doomsday_clock",
@@ -769,7 +756,6 @@ export class SinglePlayerModal extends BaseModal {
     this.airports = DEFAULT_OPTIONS.airports;
     this.homeEconomy = DEFAULT_OPTIONS.homeEconomy;
     this.kingOfTheHill = DEFAULT_OPTIONS.kingOfTheHill;
-    this.kingOfTheHillMinutes = DEFAULT_OPTIONS.kingOfTheHillMinutes;
     this.kingOfTheHill2 = DEFAULT_OPTIONS.kingOfTheHill2;
     this.kingOfTheHill2Minutes = DEFAULT_OPTIONS.kingOfTheHill2Minutes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
@@ -873,6 +859,10 @@ export class SinglePlayerModal extends BaseModal {
       case "game_settings.fog_of_war":
         this.fogOfWar = checked;
         break;
+      case "game_settings.king_of_the_hill":
+        this.kingOfTheHill = checked;
+        if (checked) this.kingOfTheHill2 = false;
+        break;
       case "game_settings.time_warp":
         this.timeWarp = checked;
         break;
@@ -959,32 +949,6 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.overtime = checked;
     this.overtimeStartMinutes = toOptionalNumber(value);
-  };
-
-  // TeamStats.Pro King of the Hill: on/off + length in minutes
-  private handleKothToggle = (
-    checked: boolean,
-    value: number | string | undefined,
-  ) => {
-    this.kingOfTheHill = checked;
-    if (checked) this.kingOfTheHill2 = false;
-    this.kingOfTheHillMinutes = toOptionalNumber(value);
-  };
-
-  // The time limit is optional: an empty field means no limit (normal win).
-  private handleKothMinutesInput = (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 1,
-      max: 600,
-      stripPattern: /[e+-]/gi,
-    });
-    if (input.value.trim() === "") {
-      this.kingOfTheHillMinutes = undefined;
-      return;
-    }
-    if (value === undefined) return;
-    this.kingOfTheHillMinutes = value;
   };
 
   // TeamStats.Pro King of the Hill 2: on/off + reign minutes to win
@@ -1321,12 +1285,7 @@ export class SinglePlayerModal extends BaseModal {
                 ...(this.selectSilo ? { selectSilo: true } : {}),
                 ...(this.airports ? { airports: true } : {}),
                 ...(this.homeEconomy ? { homeEconomy: true } : {}),
-                ...(this.kingOfTheHill
-                  ? {
-                      kingOfTheHill: true,
-                      kingOfTheHillMinutes: this.kingOfTheHillMinutes ?? null,
-                    }
-                  : {}),
+                ...(this.kingOfTheHill ? { kingOfTheHill: true } : {}),
                 ...(this.kingOfTheHill2
                   ? {
                       kingOfTheHill2: true,
