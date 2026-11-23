@@ -28,6 +28,8 @@ const LENGTH_TILES: Record<string, number> = {
   [UnitType.Warship]: 5,
 };
 const SHAPE_LENGTH = 52;
+/** Smallest plane length on screen, in CSS pixels. */
+const MIN_PLANE_PX = 16;
 const TRAIL_POINTS = 10;
 const PUFF_MS = 700;
 const HEADING_HISTORY = 4;
@@ -168,8 +170,15 @@ export class AirOverlay {
       drawn.push({ u, t, sx, sy });
     }
 
+    // Never smaller than MIN_PLANE_PX, so a zoomed-out plane stays a readable
+    // owner-colored shape instead of a dark speck.
     const size = (u: UnitView) =>
-      Math.max(10 * dpr, Math.min(56 * dpr, (LENGTH_TILES[u.type()] ?? 6) * s));
+      Math.max(
+        MIN_PLANE_PX * dpr,
+        Math.min(56 * dpr, (LENGTH_TILES[u.type()] ?? 6) * s),
+      );
+    /** Below this length planes get a colored halo and a thin outline. */
+    const small = 26 * dpr;
 
     // Contrails
     ctx.lineCap = "round";
@@ -226,7 +235,7 @@ export class AirOverlay {
         sx + off,
         sy + off,
       );
-      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.fillStyle = len < small ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.28)";
       ctx.fill(this.shapes[u.type()]);
     }
     for (const { u, t, sx, sy } of drawn) {
@@ -241,11 +250,23 @@ export class AirOverlay {
         sy,
       );
       const shape = this.shapes[u.type()];
-      ctx.fillStyle = u.owner().territoryColor().toHex();
-      ctx.fill(shape);
-      ctx.lineWidth = 2.2 / k;
-      ctx.strokeStyle = "rgba(15,18,26,0.9)";
+      const color = u.owner().territoryColor();
+      if (len < small) {
+        // Zoomed out: soft disc in the owner's color so the plane reads as
+        // theirs even where the silhouette is only a few pixels wide.
+        ctx.beginPath();
+        ctx.arc(0, 0, SHAPE_LENGTH * 0.62, 0, Math.PI * 2);
+        ctx.fillStyle = color.alpha(0.35).toRgbString();
+        ctx.fill();
+      }
+      // Outline first, body on top: the dark edge only shows outside the
+      // shape, so thin wings keep their color at any zoom.
+      ctx.lineWidth = Math.max(0.9 * dpr, Math.min(2.6 * dpr, len * 0.09)) / k;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(15,18,26,0.85)";
       ctx.stroke(shape);
+      ctx.fillStyle = color.toHex();
+      ctx.fill(shape);
       if (u.type() === UnitType.Warship && u.hasHealth()) {
         // health bar under the fighter, in screen space
         ctx.setTransform(1, 0, 0, 1, 0, 0);
