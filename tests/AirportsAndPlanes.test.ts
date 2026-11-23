@@ -7,7 +7,6 @@ import { AirDropExecution } from "../src/core/execution/AirDropExecution";
 import { CargoPlaneExecution } from "../src/core/execution/CargoPlaneExecution";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { PortExecution } from "../src/core/execution/PortExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { chebyshev, FIGHTER_PATROL_RADIUS } from "../src/core/game/Airports";
@@ -192,32 +191,6 @@ describe("Airports and Planes", () => {
     expect(plane.wasDestroyedByEnemy()).toBe(false);
     // Landed at q's airport: q got the cargo gold
     expect(q.gold() - qGold).toBeGreaterThan(20_000n);
-  });
-
-  test("a nuke does not bring a plane down", async () => {
-    const { game, p, q } = await makeGame(true, { infiniteGold: true });
-    constructionExecution(game, p, 15, 15, UnitType.Port);
-    constructionExecution(game, q, 80, 80, UnitType.Port);
-    game.addExecution(
-      new CargoPlaneExecution(
-        p,
-        p.units(UnitType.Port)[0],
-        q.units(UnitType.Port)[0],
-      ),
-    );
-    executeTicks(game, 10);
-    const plane = p.units(UnitType.TradeShip)[0];
-    expect(plane).toBeDefined();
-    // Detonate an atom bomb right on the plane
-    const nuke = new NukeExecution(
-      UnitType.AtomBomb,
-      q,
-      plane.tile(),
-      plane.tile(),
-    );
-    game.addExecution(nuke);
-    executeTicks(game, 3);
-    expect(plane.isActive()).toBe(true);
   });
 
   test("fighters take off from an airport", async () => {

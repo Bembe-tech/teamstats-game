@@ -1,5 +1,4 @@
 import { atan2 } from "../DetMath";
-import { isPlaneType } from "../game/Airports";
 import {
   Execution,
   Game,
@@ -456,7 +455,8 @@ export class NukeExecution implements Execution {
 
     const outer2 = magnitude.outer * magnitude.outer;
     const dst = this.dst;
-    const airports = mg.config().airports();
+    // Airports and Planes: planes (cargo, troop planes, fighters) inside the
+    // blast are destroyed like ships in a normal game.
     for (const unit of mg.units()) {
       const type = unit.type();
       if (
@@ -464,9 +464,7 @@ export class NukeExecution implements Execution {
         type === UnitType.HydrogenBomb ||
         type === UnitType.MIRVWarhead ||
         type === UnitType.MIRV ||
-        type === UnitType.SAMMissile ||
-        // Airports and Planes: only fighters can bring planes down
-        (airports && isPlaneType(type))
+        type === UnitType.SAMMissile
       ) {
         continue;
       }
