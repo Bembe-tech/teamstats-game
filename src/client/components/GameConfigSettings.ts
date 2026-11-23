@@ -21,7 +21,12 @@ import {
   Trios,
   UnitType,
 } from "../../core/game/Game";
-import { TeamCountConfig } from "../../core/Schemas";
+import {
+  BOT_COUNT_WARNING,
+  MAX_NATIONS,
+  MAX_TRIBES,
+  TeamCountConfig,
+} from "../../core/Schemas";
 import { translateText } from "../Utils";
 import "./Difficulties";
 import "./DifficultyInfo";
@@ -439,6 +444,69 @@ export class GameConfigSettings extends LitElement {
     </div>`;
   }
 
+  // TeamStats.Pro: Tribes and Nations sliders (up to 1000 each) with a small
+  // note once a count goes past BOT_COUNT_WARNING (the old OpenFront max).
+  private renderTribesAndNations(
+    settings: GameConfigSettingsData,
+  ): TemplateResult {
+    const bots = settings.options.bots.value;
+    const nations = settings.options.nations;
+    const showNations = nations !== undefined && !nations.hidden;
+    const nationCount = showNations ? nations.value : 0;
+    const unstable = bots > BOT_COUNT_WARNING || nationCount > BOT_COUNT_WARNING;
+    return html`
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${bots >
+          0
+            ? ACTIVE_CARD
+            : INACTIVE_CARD}"
+        >
+          <fluent-slider
+            min="0"
+            max=${MAX_TRIBES}
+            step="1"
+            .value=${bots}
+            labelKey=${settings.options.bots.labelKey}
+            disabledKey=${settings.options.bots.disabledKey}
+            @value-changed=${this.handleBotsChanged}
+          ></fluent-slider>
+        </div>
+        ${showNations
+          ? html`<div
+              class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${nations!
+                .value > 0
+                ? ACTIVE_CARD
+                : INACTIVE_CARD}"
+            >
+              <fluent-slider
+                min="0"
+                max=${MAX_NATIONS}
+                step="1"
+                .value=${nations!.value}
+                .defaultValue=${nations!.defaultValue}
+                defaultLabelKey="common.map_default"
+                labelKey=${nations!.labelKey}
+                disabledKey=${nations!.disabledKey}
+                @value-changed=${this.handleNationsChanged}
+              ></fluent-slider>
+            </div>`
+          : nothing}
+      </div>
+      ${unstable
+        ? html`<div
+            class="ts-bot-warning mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-300"
+            role="status"
+          >
+            ⚠
+            ${translateText("host_modal.bots_unstable_warning", {
+              num: BOT_COUNT_WARNING,
+            })}
+          </div>`
+        : nothing}
+    `;
+  }
+
   render() {
     if (!this.settings) return nothing;
     const settings = this.settings;
@@ -464,6 +532,15 @@ export class GameConfigSettings extends LitElement {
               ></map-picker>`,
               undefined,
               this.renderMapSearchInput(),
+            )}
+        ${!this.shows("mode")
+          ? nothing
+          : renderSection(
+              OPTIONS_ICON,
+              "text-orange-400",
+              "bg-orange-500/20",
+              "host_modal.tribes_and_nations",
+              this.renderTribesAndNations(settings),
             )}
         ${!this.shows("mode")
           ? nothing
@@ -584,43 +661,6 @@ export class GameConfigSettings extends LitElement {
               settings.options.titleKey,
               html`
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div
-                    class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${settings
-                      .options.bots.value > 0
-                      ? ACTIVE_CARD
-                      : INACTIVE_CARD}"
-                  >
-                    <fluent-slider
-                      min="0"
-                      max="400"
-                      step="1"
-                      .value=${settings.options.bots.value}
-                      labelKey=${settings.options.bots.labelKey}
-                      disabledKey=${settings.options.bots.disabledKey}
-                      @value-changed=${this.handleBotsChanged}
-                    ></fluent-slider>
-                  </div>
-
-                  ${settings.options.nations && !settings.options.nations.hidden
-                    ? html`<div
-                        class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${settings
-                          .options.nations.value > 0
-                          ? ACTIVE_CARD
-                          : INACTIVE_CARD}"
-                      >
-                        <fluent-slider
-                          min="0"
-                          max="400"
-                          step="1"
-                          .value=${settings.options.nations.value}
-                          .defaultValue=${settings.options.nations.defaultValue}
-                          defaultLabelKey="common.map_default"
-                          labelKey=${settings.options.nations.labelKey}
-                          disabledKey=${settings.options.nations.disabledKey}
-                          @value-changed=${this.handleNationsChanged}
-                        ></fluent-slider>
-                      </div>`
-                    : nothing}
                   ${settings.options.toggles.map((toggle) =>
                     this.renderOptionToggle(toggle),
                   )}

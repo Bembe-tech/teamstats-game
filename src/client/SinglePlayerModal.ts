@@ -14,7 +14,12 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
+import {
+  MAX_NATIONS,
+  MAX_TRIBES,
+  PlayerCosmetics,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
@@ -896,7 +901,7 @@ export class SinglePlayerModal extends BaseModal {
   private handleBotsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > MAX_TRIBES) {
       return;
     }
     this.bots = value;
@@ -905,7 +910,7 @@ export class SinglePlayerModal extends BaseModal {
   private handleNationsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > MAX_NATIONS) {
       return;
     }
     this.nations = value;

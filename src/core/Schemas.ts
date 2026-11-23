@@ -545,6 +545,14 @@ const GameMapSchema = z.union([
   z.string().regex(TSP_MAP_RE),
 ]) as unknown as z.ZodType<GameMapType>; // zbin derives its codec from the plain union
 
+// TeamStats.Pro: hosts may ask for up to 1000 tribes and 1000 nations
+// (OpenFront allowed 400). Tile owner ids have 12 bits (4095 players), so
+// 1000 + 1000 + humans still fits. Above BOT_COUNT_WARNING the lobby shows a
+// small "may be unstable" note: big counts slow the simulation down.
+export const MAX_TRIBES = 1000;
+export const MAX_NATIONS = 1000;
+export const BOT_COUNT_WARNING = 400;
+
 export const GameConfigSchema = z.object({
   gameMap: GameMapSchema,
   difficulty: z.enum(Difficulty),
@@ -574,12 +582,12 @@ export const GameConfigSchema = z.object({
     })
     .optional(),
   nations: zb.union(
-    [zb.uint({ min: 1, max: 400 }), z.enum(["default", "disabled"])],
+    [zb.uint({ min: 1, max: MAX_NATIONS }), z.enum(["default", "disabled"])],
     {
       select: (v) => (typeof v === "number" ? 0 : 1),
     },
   ),
-  bots: zb.uint({ max: 400 }),
+  bots: zb.uint({ max: MAX_TRIBES }),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),

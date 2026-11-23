@@ -1220,7 +1220,9 @@
     "view_subscriptions": "View Subscriptions",
     "visibility_private": "Private",
     "visibility_public": "Public",
-    "waiting": "Waiting for players..."
+    "waiting": "Waiting for players...",
+    "tribes_and_nations": "Tribes and Nations",
+    "bots_unstable_warning": "More than {num} tribes or nations may be unstable: the game can slow down or lag."
   },
   "inventory": {
     "equipped": "Equipped",

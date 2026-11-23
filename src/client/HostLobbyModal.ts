@@ -27,6 +27,8 @@ import {
   isValidGameID,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
+  MAX_NATIONS,
+  MAX_TRIBES,
   TeamCountConfig,
 } from "../core/Schemas";
 import { createLobby, getUserMe, queueLobby, setLobbyListed } from "./Api";
@@ -619,7 +621,7 @@ export class HostLobbyModal extends BaseModal {
     const tabs: [typeof this.tab, string, string][] = [
       ["map", translateText("map.map"), "🗺"],
       ["gamemodes", "TeamStats Gamemodes", "⭐"],
-      ["mode", translateText("host_modal.mode"), "⚔"],
+      ["mode", translateText("host_modal.tribes_and_nations"), "⚔"],
       ["options", translateText("game_settings.options"), "⚙"],
       ["units", translateText("game_settings.disable_units"), "🚫"],
       ["players", `${translateText("host_modal.players")} (${players})`, "👥"],
@@ -1587,7 +1589,7 @@ export class HostLobbyModal extends BaseModal {
   private handleBotsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > MAX_TRIBES) {
       return;
     }
 
@@ -1904,7 +1906,7 @@ export class HostLobbyModal extends BaseModal {
   private handleNationsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > MAX_NATIONS) {
       return;
     }
     this.nations = value;

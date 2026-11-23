@@ -263,7 +263,9 @@
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
     "start": "Rozpocznij grę",
-    "host_badge": "Host"
+    "host_badge": "Host",
+    "tribes_and_nations": "Plemiona i Narody",
+    "bots_unstable_warning": "Ponad {num} plemion lub narodów może działać niestabilnie: gra może zwolnić lub się zacinać."
   },
   "team_colors": {
     "red": "Czerwony",
