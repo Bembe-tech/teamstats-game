@@ -526,68 +526,12 @@ export class HostLobbyModal extends BaseModal {
             : nothing,
         )}
         ${card(
-          this.kingOfTheHill2,
-          "🏰",
-          "King of the Hill 2",
-          "A throne stands on the land nearest the map center (the middle island on Surrounded-like maps). Own a tile in the throne zone and station troops there: the side with the biggest garrison reigns. The reign clock only runs while the garrison is a big part of your whole army and you pay gold every second, and the longer you reign the more gold and troops each second costs. A bigger garrison takes the throne over. First to reach the reign time wins (teams share garrison and reign). Land size does not win.",
-          () => {
-            this.kingOfTheHill2 = !this.kingOfTheHill2;
-            if (this.kingOfTheHill2) this.kingOfTheHill = false;
-            this.putGameConfig();
-          },
-          this.kingOfTheHill2
-            ? html`<label class="ts-mode-field"
-                  >Reign to win
-                  <input
-                    type="number"
-                    min="1"
-                    max="60"
-                    .value=${String(this.kingOfTheHill2Minutes)}
-                    @input=${this.handleKoth2MinutesInput}
-                    @keydown=${this.handleOvertimeMinutesKeyDown}
-                  />
-                  min</label
-                ><label class="ts-mode-field"
-                  >Garrison at least
-                  <input
-                    type="number"
-                    min="5"
-                    max="90"
-                    .value=${String(this.kingOfTheHill2ArmyShare)}
-                    @input=${this.handleKoth2ShareInput}
-                    @keydown=${this.handleOvertimeMinutesKeyDown}
-                  />
-                  % of army</label
-                >`
-            : nothing,
-        )}
-        ${card(
-          this.timeWarp,
-          "⏳",
-          "OpenFront 4D",
-          "Time is the fourth dimension. Look back up to 15 s to see how the map changed, and a forecast shows where boats land and how far attacks get in the next 10 s. Twice per game a Time Echo gives back the land you lost in the last 10 s and freezes attacks on you for 5 s (costs 30% of your gold, at least 100K).",
-          () => {
-            this.timeWarp = !this.timeWarp;
-            this.putGameConfig();
-          },
-        )}
-        ${card(
           this.selectSilo,
           "🚀",
           "Select Silo mode",
           "Number your missile silos 1-9 (click a silo, pick a number). With a nuke selected, the mouse wheel switches the launch silo in number order, so you can fire from a farther silo and fly around SAMs. Without picking one, the nearest ready silo fires as usual.",
           () => {
             this.selectSilo = !this.selectSilo;
-            this.putGameConfig();
-          },
-        )}
-        ${card(
-          this.airports,
-          "✈️",
-          "Airports and Planes",
-          "Ports become airports, built anywhere on your land (also on maps without water). Trade ships become cargo planes flying straight between airports, longer flights pay more. Boats become troop planes: pick any land tile, troops take off from your nearest land and land right there (free and no cooldown, like a boat, max 3 in the air). Warships become fighters that take off from an airport, patrol and shoot planes down. Only fighters can hit planes: SAMs and nukes cannot.",
-          () => {
-            this.airports = !this.airports;
             this.putGameConfig();
           },
         )}
@@ -601,6 +545,73 @@ export class HostLobbyModal extends BaseModal {
             this.putGameConfig();
           },
         )}
+      </div>
+      <div class="ts-modes-wip">
+        <div class="ts-modes-wip-head">
+          <h4>🚧 Work in progress</h4>
+          <p>
+            Still being built and tested. They work, but rules and balance can
+            change.
+          </p>
+        </div>
+        <div class="ts-mode-grid">
+          ${card(
+            this.airports,
+            "✈️",
+            "Airports and Planes",
+            "Ports become airports, built anywhere on your land (also on maps without water). Trade ships become cargo planes flying straight between airports, longer flights pay more. Boats become troop planes: pick any land tile, troops take off from your nearest land and land right there (free and no cooldown, like a boat, max 3 in the air). Warships become fighters that take off from an airport, patrol and shoot planes down. Only fighters can hit planes: SAMs and nukes cannot.",
+            () => {
+              this.airports = !this.airports;
+              this.putGameConfig();
+            },
+          )}
+          ${card(
+            this.timeWarp,
+            "⏳",
+            "OpenFront 4D",
+            "Time is the fourth dimension. Look back up to 15 s to see how the map changed, and a forecast shows where boats land and how far attacks get in the next 10 s. Twice per game a Time Echo gives back the land you lost in the last 10 s and freezes attacks on you for 5 s (costs 30% of your gold, at least 100K).",
+            () => {
+              this.timeWarp = !this.timeWarp;
+              this.putGameConfig();
+            },
+          )}
+          ${card(
+            this.kingOfTheHill2,
+            "🏰",
+            "King of the Hill 2",
+            "A throne stands on the land nearest the map center (the middle island on Surrounded-like maps). Own a tile in the throne zone and station troops there: the side with the biggest garrison reigns. The reign clock only runs while the garrison is a big part of your whole army and you pay gold every second, and the longer you reign the more gold and troops each second costs. A bigger garrison takes the throne over. First to reach the reign time wins (teams share garrison and reign). Land size does not win.",
+            () => {
+              this.kingOfTheHill2 = !this.kingOfTheHill2;
+              if (this.kingOfTheHill2) this.kingOfTheHill = false;
+              this.putGameConfig();
+            },
+            this.kingOfTheHill2
+              ? html`<label class="ts-mode-field"
+                    >Reign to win
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      .value=${String(this.kingOfTheHill2Minutes)}
+                      @input=${this.handleKoth2MinutesInput}
+                      @keydown=${this.handleOvertimeMinutesKeyDown}
+                    />
+                    min</label
+                  ><label class="ts-mode-field"
+                    >Garrison at least
+                    <input
+                      type="number"
+                      min="5"
+                      max="90"
+                      .value=${String(this.kingOfTheHill2ArmyShare)}
+                      @input=${this.handleKoth2ShareInput}
+                      @keydown=${this.handleOvertimeMinutesKeyDown}
+                    />
+                    % of army</label
+                  >`
+              : nothing,
+          )}
+        </div>
       </div>
       <div class="ts-mode-notes">
         <div>

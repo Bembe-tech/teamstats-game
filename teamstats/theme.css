@@ -1154,6 +1154,25 @@ host-lobby-modal.page-content:not(.hidden) {
   color: var(--ts-muted);
   font-size: 14px;
 }
+.ts-modes-wip {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(255, 196, 87, 0.45);
+}
+.ts-modes-wip-head h4 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffc457;
+}
+.ts-modes-wip-head p {
+  margin: 4px 0 0;
+  color: var(--ts-muted);
+  font-size: 13px;
+}
 .ts-mode-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
