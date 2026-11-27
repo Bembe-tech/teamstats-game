@@ -13,6 +13,7 @@ import {
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import type { ThroneView } from "./Throne";
 import { ReadonlyTileSet } from "./TileSet";
 import type {
   ChronoLog,
@@ -20,8 +21,8 @@ import type {
   GhostView,
   ParadoxView,
 } from "./TimeWarp";
-import type { ThroneView } from "./Throne";
 import { UnitPredicate } from "./UnitGrid";
+import type { WorkforceView } from "./Workforce";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -660,6 +661,16 @@ export interface Player {
   throne(): ThroneView | null;
   setThrone(view: ThroneView | null): void;
   throneGarrison(): number;
+  // TeamStats.Pro Troops and Workers: workers make gold, troops fight (game/Workforce.ts)
+  workers(): number;
+  addWorkers(toAdd: number): void;
+  /** Returns the workers actually removed. */
+  removeWorkers(toRemove: number): number;
+  /** Target share of the population that should be troops, percent 1-100. */
+  targetTroopPercent(): number;
+  setTargetTroopPercent(percent: number): void;
+  workforce(): WorkforceView | null;
+  refreshWorkforceView(): void;
   // TeamStats.Pro OpenFront 4D: Time Echo uses, next allowed tick, and the
   // tick until which land attacks on this player are frozen
   loopUses(): number;

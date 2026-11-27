@@ -14,6 +14,7 @@ import {
 } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SendTroopRatioIntentEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
   getGamesPlayed,
@@ -58,6 +59,18 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _attackingTroops: number = 0;
+
+  // TeamStats.Pro Troops and Workers mode
+  @state()
+  private _taw = false;
+  @state()
+  private _workers = 0;
+  @state()
+  private _troopPercent = 70;
+  @state()
+  private _goldRate: bigint = 0n;
+  private _troopPercentDragging = false;
+  private _troopPercentSentAt = -1;
 
   @state()
   private _goldGain: bigint | null = null;
@@ -142,6 +155,19 @@ export class ControlPanel extends LitElement implements Controller {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
+    this._taw = config.troopsAndWorkers();
+    if (this._taw) {
+      this._workers = player.workers();
+      this._goldRate = config.goldAdditionRate(player) * 10n;
+      // Follow the game's value, except while dragging or right after sending
+      // (the intent needs a moment to come back in the player update)
+      const sentRecently =
+        this._troopPercentSentAt >= 0 &&
+        this.game.ticks() - this._troopPercentSentAt < 30;
+      if (!this._troopPercentDragging && !sentRecently) {
+        this._troopPercent = player.targetTroopPercent();
+      }
+    }
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -363,6 +389,70 @@ export class ControlPanel extends LitElement implements Controller {
     (e.target as HTMLInputElement).blur();
   }
 
+  private handleTroopPercentInput(e: Event) {
+    this._troopPercentDragging = true;
+    this._troopPercent = Number((e.target as HTMLInputElement).value);
+  }
+
+  private handleTroopPercentChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    this._troopPercent = Number(input.value);
+    this._troopPercentDragging = false;
+    this._troopPercentSentAt = this.game.ticks();
+    this.eventBus.emit(new SendTroopRatioIntentEvent(this._troopPercent));
+    input.blur();
+  }
+
+  // Troops and Workers: the split slider (troops left, workers right)
+  private renderTroopRatioRow(mobile: boolean) {
+    if (!this._taw) return html``;
+    const workersPct = 100 - this._troopPercent;
+    return html`
+      <div
+        class="flex items-center gap-1.5 mt-1 ${mobile ? "text-xs" : "text-sm"}"
+        translate="no"
+        title=${translateText("control_panel.troop_ratio_hint")}
+      >
+        <span class="shrink-0 font-bold text-malibu-blue tabular-nums"
+          >🪖 ${translateText("control_panel.troops")}
+          ${this._troopPercent}%</span
+        >
+        <input
+          type="range"
+          min="1"
+          max="100"
+          .value=${String(this._troopPercent)}
+          @input=${(e: Event) => this.handleTroopPercentInput(e)}
+          @change=${(e: Event) => this.handleTroopPercentChange(e)}
+          class="flex-1 h-1.5 accent-yellow-400 cursor-pointer"
+        />
+        <span class="shrink-0 font-bold text-yellow-400 tabular-nums"
+          >⚒️ ${translateText("control_panel.workers")} ${workersPct}%
+          (${renderTroops(this._workers)},
+          +${renderNumber(this._goldRate)}/s)</span
+        >
+      </div>
+    `;
+  }
+
+  private workersBarPercent(green: number, orange: number): number {
+    if (!this._taw) return 0;
+    const base = Math.max(this._maxTroops, 1);
+    return Math.max(
+      0,
+      Math.min(100 - green - orange, (this._workers / base) * 100),
+    );
+  }
+
+  private renderWorkersSegment(green: number, orange: number) {
+    const w = this.workersBarPercent(green, orange);
+    if (w <= 0) return html``;
+    return html`<div
+      class="absolute inset-y-0 left-0 w-full origin-left bg-yellow-500/70 transition-transform duration-200 ease-out"
+      style="transform: translateX(${green + orange}%) scaleX(${w / 100});"
+    ></div>`;
+  }
+
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
     const base = Math.max(this._maxTroops, 1);
     const greenPercentRaw = (this._troops / base) * 100;
@@ -393,6 +483,7 @@ export class ControlPanel extends LitElement implements Controller {
             style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
             100});"
           ></div>
+          ${this.renderWorkersSegment(greenPercent, orangePercent)}
         </div>
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
@@ -451,6 +542,7 @@ export class ControlPanel extends LitElement implements Controller {
             style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
             100});"
           ></div>
+          ${this.renderWorkersSegment(greenPercent, orangePercent)}
         </div>
         <div
           class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
@@ -596,6 +688,7 @@ export class ControlPanel extends LitElement implements Controller {
           class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
+      ${this.renderTroopRatioRow(false)}
     `;
   }
 
@@ -663,6 +756,7 @@ export class ControlPanel extends LitElement implements Controller {
           />
         </div>
       </div>
+      ${this.renderTroopRatioRow(true)}
     `;
   }
 

@@ -21,6 +21,7 @@ import {
 } from "../game/Game";
 import { THRONE_DEFAULTS } from "../game/Throne";
 import { UserSettings } from "../game/UserSettings";
+import { WORKFORCE } from "../game/Workforce";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
@@ -452,6 +453,20 @@ export class Config {
     return s !== undefined && s !== null && s > 0
       ? s
       : THRONE_DEFAULTS.armySharePercent;
+  }
+  /** Troops and Workers: the old OpenFront population split (game/Workforce.ts). */
+  troopsAndWorkers(): boolean {
+    return this._gameConfig.troopsAndWorkers ?? false;
+  }
+  /**
+   * The most troops the player can have: the cap, or in Troops and Workers
+   * the troop share of it (the rest of the population are workers).
+   */
+  troopCap(player: Player | PlayerView): number {
+    const max = this.maxTroops(player);
+    return this.troopsAndWorkers()
+      ? (max * player.targetTroopPercent()) / 100
+      : max;
   }
   homeEconomy(): boolean {
     return this._gameConfig.homeEconomy ?? false;
@@ -1114,15 +1129,19 @@ export class Config {
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
+    // Troops and Workers: the whole population (troops + workers) grows and
+    // fills the cap; PlayerExecution splits the growth by the troop ratio
+    const pop = this.troopsAndWorkers()
+      ? player.troops() + player.workers()
+      : player.troops();
+
+    let toAdd = 10 + pow(pop, 0.73) / 4;
 
     // King of the Hill 2: the throne garrison still fills the population cap,
     // so parking troops there does not speed up growth
     const garrison = player.throneGarrison();
     const ratio =
-      garrison > 0
-        ? Math.max(0, 1 - (player.troops() + garrison) / max)
-        : 1 - player.troops() / max;
+      garrison > 0 ? Math.max(0, 1 - (pop + garrison) / max) : 1 - pop / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -1148,11 +1167,17 @@ export class Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.min(pop + toAdd, max) - pop;
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {
     const multiplier = this.goldMultiplierFor(player);
+    if (this.troopsAndWorkers()) {
+      // Old OpenFront: workers make the gold, no flat income
+      const fromWorkers =
+        WORKFORCE.goldFactor * pow(player.workers(), WORKFORCE.goldExponent);
+      return BigInt(Math.floor(fromWorkers * multiplier));
+    }
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
       baseRate = 50n;

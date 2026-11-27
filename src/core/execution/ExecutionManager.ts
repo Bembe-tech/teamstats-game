@@ -26,11 +26,12 @@ import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
+import { ThroneOrderExecution } from "./ThroneOrderExecution";
 import { TimeEchoExecution } from "./TimeEchoExecution";
 import { TimeGhostExecution } from "./TimeGhostExecution";
-import { ThroneOrderExecution } from "./ThroneOrderExecution";
 import { TimeLoopExecution } from "./TimeLoopExecution";
 import { TribeSpawner } from "./TribeSpawner";
+import { TroopRatioExecution } from "./TroopRatioExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
@@ -153,6 +154,8 @@ export class Executor {
         return new TimeLoopExecution(player);
       case "time_ghost":
         return new TimeGhostExecution(player);
+      case "troop_ratio":
+        return new TroopRatioExecution(player, intent.percent);
       case "throne":
         return new ThroneOrderExecution(player, intent.action, intent.percent);
       case "delayed_order":

@@ -14,6 +14,7 @@ import {
   tileTraversalScratch,
   TileTraversalScratch,
 } from "../game/TileTraversalScratch";
+import { workforceTick } from "../game/Workforce";
 import { getMode, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
@@ -84,10 +85,16 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
-    const goldFromWorkers = this.config.goldAdditionRate(this.player);
-    this.player.addGold(goldFromWorkers);
+    let goldFromWorkers: bigint;
+    if (this.config.troopsAndWorkers()) {
+      // TeamStats.Pro Troops and Workers: population split (game/Workforce.ts)
+      goldFromWorkers = workforceTick(this.mg!, this.player);
+    } else {
+      const troopInc = this.config.troopIncreaseRate(this.player);
+      this.player.addTroops(troopInc);
+      goldFromWorkers = this.config.goldAdditionRate(this.player);
+      this.player.addGold(goldFromWorkers);
+    }
 
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);

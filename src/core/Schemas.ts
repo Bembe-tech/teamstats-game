@@ -60,7 +60,8 @@ export type Intent =
   | DelayedOrderIntent
   | TimeGhostIntent
   | TimeLoopIntent
-  | ThroneIntent;
+  | ThroneIntent
+  | TroopRatioIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -627,6 +628,9 @@ export const GameConfigSchema = z.object({
   kingOfTheHill2: z.boolean().nullable().optional(),
   kingOfTheHill2Minutes: zb.uint({ min: 1, max: 60 }).nullable().optional(),
   kingOfTheHill2ArmyShare: zb.uint({ min: 5, max: 90 }).nullable().optional(),
+  // TeamStats.Pro "Troops and Workers": the old OpenFront population split
+  // (game/Workforce.ts). Workers make the gold, troops fight.
+  troopsAndWorkers: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
@@ -913,6 +917,14 @@ export const ThroneIntentSchema = z.object({
 });
 export type ThroneIntent = z.infer<typeof ThroneIntentSchema>;
 
+// TeamStats.Pro "Troops and Workers": the share of the population that should
+// be troops (the rest are workers), in percent (see TroopRatioExecution)
+export const TroopRatioIntentSchema = z.object({
+  type: z.literal("troop_ratio"),
+  percent: zb.uint({ min: 1, max: 100 }),
+});
+export type TroopRatioIntent = z.infer<typeof TroopRatioIntentSchema>;
+
 export const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -944,6 +956,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TimeGhostIntentSchema,
   TimeLoopIntentSchema,
   ThroneIntentSchema,
+  TroopRatioIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

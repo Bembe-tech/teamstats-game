@@ -427,6 +427,17 @@ export class NukeExecution implements Execution {
             maxTroops,
           ),
         );
+        // Troops and Workers: the blast kills workers too
+        if (player.workers() > 0) {
+          player.removeWorkers(
+            config.nukeDeathFactor(
+              this.nukeType,
+              player.workers(),
+              numTilesLeft,
+              maxTroops,
+            ),
+          );
+        }
         for (const attack of outgoingAttacks) {
           const attackTroops = attack.troops();
           const deaths = config.nukeDeathFactor(

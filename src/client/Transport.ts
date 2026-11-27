@@ -175,6 +175,11 @@ export class SendThroneIntentEvent implements GameEvent {
   ) {}
 }
 
+/** TeamStats.Pro Troops and Workers: the troop share of the population (%). */
+export class SendTroopRatioIntentEvent implements GameEvent {
+  constructor(public readonly percent: number) {}
+}
+
 export class SendDeleteUnitIntentEvent implements GameEvent {
   constructor(public readonly unitId: number) {}
 }
@@ -347,6 +352,9 @@ export class Transport {
     );
     this.subscribe(SendTimeGhostIntentEvent, () =>
       this.sendIntent({ type: "time_ghost" }),
+    );
+    this.subscribe(SendTroopRatioIntentEvent, (e) =>
+      this.sendIntent({ type: "troop_ratio", percent: e.percent }),
     );
     this.subscribe(SendThroneIntentEvent, (e) =>
       this.sendIntent({

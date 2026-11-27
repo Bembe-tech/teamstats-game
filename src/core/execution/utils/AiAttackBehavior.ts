@@ -402,13 +402,13 @@ export class AiAttackBehavior {
   }
 
   private hasReserveRatioTroops(): boolean {
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxTroops = this.game.config().troopCap(this.player);
     const ratio = this.player.troops() / maxTroops;
     return ratio >= this.reserveRatio;
   }
 
   private hasTriggerRatioTroops(): boolean {
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxTroops = this.game.config().troopCap(this.player);
     const ratio = this.player.troops() / maxTroops;
     return ratio >= this.triggerRatio;
   }
@@ -1000,7 +1000,7 @@ export class AiAttackBehavior {
     target: Player | TerraNullius,
     nonBotTroops: (targetTroops: number) => number,
   ): number | null {
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxTroops = this.game.config().troopCap(this.player);
     const botWithStructures =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
@@ -1184,7 +1184,7 @@ export class AiAttackBehavior {
     // Find teammate with lowest troop percentage (troops / maxTroops)
     const teammatesWithTroopPercentage = teammates
       .map((teammate) => {
-        const maxTroops = this.game.config().maxTroops(teammate);
+        const maxTroops = this.game.config().troopCap(teammate);
         const troopPercentage = teammate.troops() / Math.max(maxTroops, 1);
         return { teammate, troopPercentage };
       })
@@ -1204,7 +1204,7 @@ export class AiAttackBehavior {
     }
 
     // Donate a portion of our troops (keeping reserve)
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxTroops = this.game.config().troopCap(this.player);
     const troopsToKeep = maxTroops * this.reserveRatio;
     const availableTroops = this.player.troops() - troopsToKeep;
 

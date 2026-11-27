@@ -109,6 +109,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private selectSilo: boolean = false;
   @state() private airports: boolean = false;
   @state() private homeEconomy: boolean = false;
+  @state() private troopsAndWorkers: boolean = false;
   @state() private kingOfTheHill: boolean = false;
   @state() private kingOfTheHill2: boolean = false;
   @state() private kingOfTheHill2Minutes: number = 5;
@@ -555,6 +556,16 @@ export class HostLobbyModal extends BaseModal {
           </p>
         </div>
         <div class="ts-mode-grid">
+          ${card(
+            this.troopsAndWorkers,
+            "⚒️",
+            "Troops and Workers",
+            "The old OpenFront slider is back. Your population is split into troops and workers: troops attack and defend, workers make the gold (there is no flat income). A slider under your troop bar sets the split (start 70% troops). More workers = much more gold but a smaller army, so you can build an economy and switch back to troops before a war (troops come back slowly, about 1% of your cap per second). Nukes kill workers too.",
+            () => {
+              this.troopsAndWorkers = !this.troopsAndWorkers;
+              this.putGameConfig();
+            },
+          )}
           ${card(
             this.airports,
             "✈️",
@@ -1434,6 +1445,7 @@ export class HostLobbyModal extends BaseModal {
     this.selectSilo = false;
     this.airports = false;
     this.homeEconomy = false;
+    this.troopsAndWorkers = false;
     this.kingOfTheHill = false;
     this.kingOfTheHill2 = false;
     this.kingOfTheHill2Minutes = 5;
@@ -2064,6 +2076,7 @@ export class HostLobbyModal extends BaseModal {
       selectSilo: this.selectSilo ? true : null,
       airports: this.airports ? true : null,
       homeEconomy: this.homeEconomy ? true : null,
+      troopsAndWorkers: this.troopsAndWorkers ? true : null,
       kingOfTheHill: this.kingOfTheHill ? true : null,
       kingOfTheHillMinutes: null,
       kingOfTheHill2: this.kingOfTheHill2 ? true : null,

@@ -52,6 +52,7 @@ export function diffPlayerUpdate(
     prev.trainGold === next.trainGold &&
     prev.crownTicks === next.crownTicks &&
     prev.throne === next.throne &&
+    prev.workforce === next.workforce &&
     prev.delayedOrders === next.delayedOrders &&
     prev.loopUses === next.loopUses &&
     prev.lastParadox === next.lastParadox &&
@@ -116,6 +117,7 @@ export function diffPlayerUpdate(
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("crownTicks", prev.crownTicks === next.crownTicks);
   setIfDifferent("throne", prev.throne === next.throne);
+  setIfDifferent("workforce", prev.workforce === next.workforce);
   setIfDifferent("delayedOrders", prev.delayedOrders === next.delayedOrders);
   setIfDifferent("loopUses", prev.loopUses === next.loopUses);
   setIfDifferent("lastParadox", prev.lastParadox === next.lastParadox);
@@ -207,6 +209,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);
   if (pu.crownTicks !== undefined) target.crownTicks = pu.crownTicks;
   if (pu.throne !== undefined) target.throne = pu.throne;
+  if (pu.workforce !== undefined) target.workforce = pu.workforce;
   if (pu.delayedOrders !== undefined) target.delayedOrders = pu.delayedOrders;
   if (pu.loopUses !== undefined) target.loopUses = pu.loopUses;
   if (pu.lastParadox !== undefined) target.lastParadox = pu.lastParadox;

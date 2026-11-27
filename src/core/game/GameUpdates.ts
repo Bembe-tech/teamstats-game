@@ -17,8 +17,9 @@ import {
   WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
-import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
 import type { ThroneView } from "./Throne";
+import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
+import type { WorkforceView } from "./Workforce";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -253,6 +254,8 @@ export interface PlayerUpdate {
   crownTicks?: number;
   /** TeamStats.Pro King of the Hill 2: garrison + side reign (game/Throne.ts). */
   throne?: ThroneView | null;
+  /** TeamStats.Pro Troops and Workers: workers + troop ratio (game/Workforce.ts). */
+  workforce?: WorkforceView | null;
   /** TeamStats.Pro OpenFront 4D: Time Echo state (see game/TimeWarp.ts). */
   delayedOrders?: DelayedOrderView[];
   loopUses?: number;

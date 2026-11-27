@@ -86,6 +86,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     trainGold: Number(pu.trainGold ?? 0n),
     crownTicks: pu.crownTicks ?? 0,
     throne: pu.throne ?? null,
+    workforce: pu.workforce ?? null,
     delayedOrders: pu.delayedOrders ?? [],
     loopUses: pu.loopUses ?? 0,
     lastParadox: pu.lastParadox ?? null,
@@ -569,6 +570,16 @@ export class PlayerView {
 
   throneGarrison(): number {
     return this.state.throne?.garrison ?? 0;
+  }
+
+  /** Troops and Workers mode: workers (refreshed every second). */
+  workers(): number {
+    return this.state.workforce?.workers ?? 0;
+  }
+
+  /** Troops and Workers mode: target troop ratio, percent 1-100. */
+  targetTroopPercent(): number {
+    return this.state.workforce?.percent ?? 100;
   }
 
   /** TeamStats.Pro OpenFront 4D: Time Loop uses and the newest paradox. */

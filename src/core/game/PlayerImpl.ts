@@ -57,18 +57,19 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import type { ThroneView } from "./Throne";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
   bumpTraversalGeneration,
   tileTraversalScratch,
 } from "./TileTraversalScratch";
 import type { DelayedOrderView, GhostView, ParadoxView } from "./TimeWarp";
-import type { ThroneView } from "./Throne";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
+import { WORKFORCE, type WorkforceView } from "./Workforce";
 
 // Rot re-stamps every second, so a little slack keeps the cue from strobing.
 const DECAY_CUE_GRACE_TICKS = 30;
@@ -128,6 +129,10 @@ export class PlayerImpl implements Player {
   private _trainGold: bigint = 0n;
   private _crownTicks = 0;
   private _throne: ThroneView | null = null;
+  // Troops and Workers mode (game/Workforce.ts)
+  private _workers: bigint = 0n;
+  private _targetTroopPercent: number = WORKFORCE.startPercent;
+  private _workforce: WorkforceView | null = null;
   private _delayedOrders: DelayedOrderView[] = [];
   private _loopUses = 0;
   private _lastParadox: ParadoxView | null = null;
@@ -392,6 +397,7 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       crownTicks: this._crownTicks,
       throne: this._throne,
+      workforce: this._workforce,
       delayedOrders: this._delayedOrders,
       loopUses: this._loopUses,
       lastParadox: this._lastParadox,
@@ -1352,6 +1358,47 @@ export class PlayerImpl implements Player {
 
   throneGarrison(): number {
     return this._throne?.garrison ?? 0;
+  }
+
+  workers(): number {
+    return Number(this._workers);
+  }
+
+  addWorkers(toAdd: number): void {
+    if (toAdd <= 0) return;
+    this._workers += toInt(toAdd);
+  }
+
+  removeWorkers(toRemove: number): number {
+    if (toRemove <= 0) return 0;
+    const removed = minInt(this._workers, toInt(toRemove));
+    this._workers -= removed;
+    return Number(removed);
+  }
+
+  targetTroopPercent(): number {
+    return this._targetTroopPercent;
+  }
+
+  setTargetTroopPercent(percent: number): void {
+    const p = Math.max(1, Math.min(100, Math.round(percent)));
+    if (p === this._targetTroopPercent) return;
+    this._targetTroopPercent = p;
+    this.refreshWorkforceView();
+  }
+
+  workforce(): WorkforceView | null {
+    return this._workforce;
+  }
+
+  /** Replace (never mutate) so the update diff sees the change. */
+  refreshWorkforceView(): void {
+    const workers = this.workers();
+    const percent = this._targetTroopPercent;
+    const old = this._workforce;
+    if (old !== null && old.workers === workers && old.percent === percent)
+      return;
+    this._workforce = { workers, percent };
   }
 
   loopUses(): number {

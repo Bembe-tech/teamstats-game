@@ -125,6 +125,7 @@ const DEFAULT_OPTIONS = {
   selectSilo: false,
   airports: false,
   homeEconomy: false,
+  troopsAndWorkers: false,
   kingOfTheHill: false,
   kingOfTheHill2: false,
   kingOfTheHill2Minutes: undefined as number | undefined,
@@ -222,6 +223,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private selectSilo: boolean = DEFAULT_OPTIONS.selectSilo;
   @state() private airports: boolean = DEFAULT_OPTIONS.airports;
   @state() private homeEconomy: boolean = DEFAULT_OPTIONS.homeEconomy;
+  @state() private troopsAndWorkers: boolean = DEFAULT_OPTIONS.troopsAndWorkers;
   @state() private kingOfTheHill: boolean = DEFAULT_OPTIONS.kingOfTheHill;
   @state() private kingOfTheHill2: boolean = DEFAULT_OPTIONS.kingOfTheHill2;
   @state() private kingOfTheHill2Minutes: number | undefined =
@@ -599,6 +601,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.homeEconomy,
                   },
                   {
+                    labelKey: "game_settings.troops_and_workers",
+                    checked: this.troopsAndWorkers,
+                  },
+                  {
                     // Time limit = the normal Game length option (optional).
                     labelKey: "game_settings.king_of_the_hill",
                     checked: this.kingOfTheHill,
@@ -677,6 +683,7 @@ export class SinglePlayerModal extends BaseModal {
       this.selectSilo !== DEFAULT_OPTIONS.selectSilo ||
       this.airports !== DEFAULT_OPTIONS.airports ||
       this.homeEconomy !== DEFAULT_OPTIONS.homeEconomy ||
+      this.troopsAndWorkers !== DEFAULT_OPTIONS.troopsAndWorkers ||
       this.kingOfTheHill !== DEFAULT_OPTIONS.kingOfTheHill ||
       this.kingOfTheHill2 !== DEFAULT_OPTIONS.kingOfTheHill2 ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
@@ -760,6 +767,7 @@ export class SinglePlayerModal extends BaseModal {
     this.selectSilo = DEFAULT_OPTIONS.selectSilo;
     this.airports = DEFAULT_OPTIONS.airports;
     this.homeEconomy = DEFAULT_OPTIONS.homeEconomy;
+    this.troopsAndWorkers = DEFAULT_OPTIONS.troopsAndWorkers;
     this.kingOfTheHill = DEFAULT_OPTIONS.kingOfTheHill;
     this.kingOfTheHill2 = DEFAULT_OPTIONS.kingOfTheHill2;
     this.kingOfTheHill2Minutes = DEFAULT_OPTIONS.kingOfTheHill2Minutes;
@@ -879,6 +887,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.home_economy":
         this.homeEconomy = checked;
+        break;
+      case "game_settings.troops_and_workers":
+        this.troopsAndWorkers = checked;
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
@@ -1290,6 +1301,7 @@ export class SinglePlayerModal extends BaseModal {
                 ...(this.selectSilo ? { selectSilo: true } : {}),
                 ...(this.airports ? { airports: true } : {}),
                 ...(this.homeEconomy ? { homeEconomy: true } : {}),
+                ...(this.troopsAndWorkers ? { troopsAndWorkers: true } : {}),
                 ...(this.kingOfTheHill ? { kingOfTheHill: true } : {}),
                 ...(this.kingOfTheHill2
                   ? {
